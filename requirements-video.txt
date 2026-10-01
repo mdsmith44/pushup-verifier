@@ -1,0 +1,3 @@
+# Optional extraction dependencies. Lock exact working versions after the pilot.
+mediapipe
+opencv-python

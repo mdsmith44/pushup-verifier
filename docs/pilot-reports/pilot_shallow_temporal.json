@@ -1,0 +1,40 @@
+{
+  "input": "private pilot observation CSV (not published)",
+  "observation_count": 331,
+  "mode": "temporal",
+  "config": {
+    "top_angle": 145.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 0,
+    "rejected": 1,
+    "unable_to_assess": 1
+  },
+  "attempts": [
+    {
+      "start_s": 4.268,
+      "end_s": 6.003,
+      "status": "rejected",
+      "reasons": [
+        "Required bottom-angle evidence not observed."
+      ]
+    },
+    {
+      "start_s": 7.137,
+      "end_s": 11.005,
+      "status": "unable_to_assess",
+      "reasons": [
+        "Video ended before return to top was verified."
+      ]
+    }
+  ],
+  "uncertainty_intervals": [],
+  "note": "Only top-anchored attempts are segmented; missing evidence can hide additional reps."
+}

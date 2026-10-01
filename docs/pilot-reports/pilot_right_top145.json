@@ -1,0 +1,48 @@
+{
+  "input": "private pilot observation CSV (not published)",
+  "observation_count": 447,
+  "mode": "temporal",
+  "config": {
+    "top_angle": 145.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 2,
+    "rejected": 0,
+    "unable_to_assess": 1
+  },
+  "attempts": [
+    {
+      "start_s": 1.0,
+      "end_s": 3.002,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 3.535,
+      "end_s": 5.47,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 6.003,
+      "end_s": 14.873,
+      "status": "unable_to_assess",
+      "reasons": [
+        "Video ended before return to top was verified."
+      ]
+    }
+  ],
+  "uncertainty_intervals": [],
+  "note": "Only top-anchored attempts are segmented; missing evidence can hide additional reps."
+}

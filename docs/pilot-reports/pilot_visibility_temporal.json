@@ -1,0 +1,64 @@
+{
+  "input": "private pilot observation CSV (not published)",
+  "observation_count": 416,
+  "mode": "temporal",
+  "config": {
+    "top_angle": 145.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 0,
+    "rejected": 0,
+    "unable_to_assess": 0
+  },
+  "attempts": [],
+  "uncertainty_intervals": [
+    {
+      "start_s": 3.502,
+      "end_s": 3.535
+    },
+    {
+      "start_s": 5.337,
+      "end_s": 5.637
+    },
+    {
+      "start_s": 5.837,
+      "end_s": 6.27
+    },
+    {
+      "start_s": 6.403,
+      "end_s": 6.737
+    },
+    {
+      "start_s": 6.77,
+      "end_s": 6.803
+    },
+    {
+      "start_s": 9.438,
+      "end_s": 10.038
+    },
+    {
+      "start_s": 10.072,
+      "end_s": 10.605
+    },
+    {
+      "start_s": 10.805,
+      "end_s": 10.838
+    },
+    {
+      "start_s": 13.573,
+      "end_s": 13.607
+    },
+    {
+      "start_s": 13.64,
+      "end_s": 13.84
+    }
+  ],
+  "note": "Only top-anchored attempts are segmented; missing evidence can hide additional reps."
+}

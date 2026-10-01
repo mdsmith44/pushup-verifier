@@ -1,0 +1,64 @@
+{
+  "input": "private pilot observation CSV (not published)",
+  "observation_count": 447,
+  "mode": "immediate",
+  "config": {
+    "top_angle": 145.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 5,
+    "rejected": 0,
+    "unable_to_assess": 0
+  },
+  "attempts": [
+    {
+      "start_s": 0.867,
+      "end_s": 2.802,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 3.468,
+      "end_s": 5.202,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 5.937,
+      "end_s": 7.503,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 8.203,
+      "end_s": 9.905,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 10.338,
+      "end_s": 12.072,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    }
+  ],
+  "uncertainty_intervals": [],
+  "note": "Only top-anchored attempts are segmented; missing evidence can hide additional reps."
+}
