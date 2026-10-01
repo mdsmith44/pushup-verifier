@@ -6,6 +6,12 @@ Pushup Verifier processes a recorded video, estimates body landmarks with MediaP
 
 The current prototype runs locally with Python, MediaPipe, OpenCV, and NumPy. It uses a pretrained pose model; model training is not part of the current work.
 
+## Demo
+
+A short, cropped clip from the current pilot. This is a work-in-progress demonstration; see the pilot findings below for measured results and known limitations.
+
+https://github.com/user-attachments/assets/f87522f5-fa4a-4be2-832a-94793e142257
+
 ## What is implemented
 
 - Video-to-measurement extraction with an explicit anatomical side selection.
