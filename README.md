@@ -8,10 +8,11 @@ The current prototype runs locally with Python, MediaPipe, OpenCV, and NumPy. It
 
 ## Demo
 
-A short, cropped clip from the current pilot. This is a work-in-progress demonstration; see the pilot findings below for measured results and known limitations.
+A fresh mixed-set validation clip, processed without retuning: full–shallow–full–shallow–full. The overlay shows raw measurements and completed decisions from the saved temporal replay. Click the preview to open the MP4.
 
-https://github.com/user-attachments/assets/f87522f5-fa4a-4be2-832a-94793e142257
+[![Watch the annotated validation demo](docs/media/validation-demo.png)](docs/media/validation-demo.mp4)
 
+One participant, one new clip; not a general accuracy claim. [Earlier pilot demo](https://github.com/user-attachments/assets/f87522f5-fa4a-4be2-832a-94793e142257).
 ## What is implemented
 
 - Video-to-measurement extraction with an explicit anatomical side selection.
@@ -23,7 +24,7 @@ https://github.com/user-attachments/assets/f87522f5-fa4a-4be2-832a-94793e142257
 - Opt-in separation of movement completion from alignment assessment, plus explicit partial-start reporting.
 - 52 unit tests covering geometry, sequence logic, threshold boundaries, evidence gaps, and experimental policies, including a deferred hand-release experiment.
 
-**Status:** nine single-person recordings have been processed across three pilot batches. Fixed-setting follow-up evaluations exposed framing, startup, and tracking limitations; subsequent changes were tested on those same recordings and remain development results. This is not a validated fitness assessment or an official military test scorer.
+**Status:** ten single-person recordings have been processed across three pilot batches and one fresh validation clip. Fixed-setting follow-up evaluations exposed framing, startup, and tracking limitations; subsequent changes were tested on those same recordings and remain development results. The fresh mixed clip matched all five expected decisions without retuning; broader validation is still needed. This is not a validated fitness assessment or an official military test scorer.
 
 ## Pipeline
 
@@ -78,6 +79,12 @@ Two opt-in changes address different failures:
 These changes improve visibility into what the system observed; they do not establish accuracy or generalization. The original frozen evaluations are preserved. Single-frame dropout tolerance and an ankle-jump guard were also explored: neither is enabled in the normal pipeline, and the jump guard reduced tracking coverage. Landmark sensitivity remains a documented limitation rather than a solved problem.
 
 See the [pilot2 evaluation](docs/pilot2-evaluation.md), [pilot3 evaluation](docs/pilot3-evaluation.md), [confidence diagnosis](docs/pilot3-diagnosis.md), [separate-alignment experiment](docs/separate-alignment.md), and [partial-start experiment](docs/partial-start.md).
+
+## Fresh-video validation milestone
+
+After the experimental policies were implemented, a new recording (`pilot3B_mixed`) was evaluated using the fixed 140° temporal configuration with separate alignment and partial-start reporting enabled. Its expected sequence was supplied before processing. All five movements were completed, with decisions **accepted → rejected for depth → accepted → rejected for depth → accepted**. There were no evidence gaps, unassessable decisions, or partial starts.
+
+This is count-and-order agreement on one new clip from the same participant, not a general accuracy estimate. Predicted intervals have not yet been independently matched to manual timestamps. The baseline temporal policy at the same thresholds also succeeds on this clip, so it does not demonstrate the benefit of the experimental uncertainty policies. See the [validation report and saved results](docs/pilot3B-validation.md).
 
 ## Observable rules
 
@@ -201,6 +208,6 @@ For notebook work, install `jupyterlab`, `ipykernel`, and `matplotlib` in the sa
 
 - Complete timestamped matching for the follow-up recordings and report missed movements alongside form decisions.
 - Review remaining depth disagreements and whole-pose loss in the mixed clip.
-- Validate the experimental policies on a fresh labeled session without retuning.
+- Extend the fresh-clip validation with independent timing labels and recordings that exercise uncertainty policies.
 - Expand beyond one participant and camera setup before making generalization claims.
 MediaPipe performs the pretrained perception step. The project work focuses on geometry, stateful procedure verification, diagnostics, and transparent evaluation. See [MediaPipe documentation](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker) for model details.

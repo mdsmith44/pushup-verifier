@@ -19,3 +19,6 @@ models/
 .local-backups/
 notebooks/image.jpg
 notebooks/mediapipe.ipynb
+
+# Selected, explicitly published portfolio demo only
+!docs/media/validation-demo.mp4
