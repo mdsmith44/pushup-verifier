@@ -13,6 +13,8 @@ RUN apt-get update \
 
 COPY requirements-app.lock.txt .
 RUN python -m pip install --no-cache-dir -r requirements-app.lock.txt
+COPY requirements-aws.txt .
+RUN python -m pip install --no-cache-dir -r requirements-aws.txt
 
 COPY pushup ./pushup
 COPY config ./config
