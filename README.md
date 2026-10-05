@@ -8,11 +8,14 @@ The current prototype runs locally with Python, MediaPipe, OpenCV, and NumPy. It
 
 ## Demo
 
-A fresh mixed-set validation clip, processed without retuning: full–shallow–full–shallow–full. The overlay shows raw measurements and completed decisions from the saved temporal replay. Click the preview to open the MP4.
+A fresh mixed-set validation clip, processed without retuning: full–shallow–full–shallow–full. The overlay shows raw measurements and completed decisions from the saved temporal replay. 
 
-[![Watch the annotated validation demo](docs/media/validation-demo.png)](docs/media/validation-demo.mp4)
+<img src='results/pushup_with_counter.gif'>
 
-One participant, one new clip; not a general accuracy claim. [Earlier pilot demo](https://github.com/user-attachments/assets/f87522f5-fa4a-4be2-832a-94793e142257).
+
+[Click to open the MP4.](docs/media/validation-demo.mp4)
+
+
 ## What is implemented
 
 - Video-to-measurement extraction with an explicit anatomical side selection.
