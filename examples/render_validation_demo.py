@@ -19,7 +19,7 @@ def main():
     cap=cv2.VideoCapture(str(ROOT/'data/raw/pilot3B_mixed.mov'))
     if not cap.isOpened():
         raise RuntimeError('Cannot open source video')
-    out=ROOT/'results/pilot3B_demo_render.mp4'
+    out=ROOT/'results/pilot3B_demo_large_counters_render.mp4'
     if out.exists():
         raise FileExistsError(out)
     media=ROOT/'docs/media'
@@ -36,13 +36,18 @@ def main():
                 raise RuntimeError('Video and observation timestamps differ')
             points=[(float(r[j+'_x']),float(r[j+'_y'])) for j in ('shoulder','elbow','wrist','hip','ankle')] if r['shoulder_x'] else None
             canvas=annotate(frame,points,float(r['elbow_angle']) if r['elbow_angle'] else '',float(r['body_angle']) if r['body_angle'] else '',float(r['confidence']),t,'right',config)
-            canvas=cv2.copyMakeBorder(canvas,0,90,0,0,cv2.BORDER_CONSTANT,value=(20,20,20))
+            canvas=cv2.copyMakeBorder(canvas,0,160,0,0,cv2.BORDER_CONSTANT,value=(20,20,20))
             finished=[a for a in report['attempts'] if a['end_s']<=t]
             accepted=sum(a['status']=='accepted' for a in finished)
             rejected=sum(a['status']=='rejected' for a in finished)
             last=f"Last decision: {finished[-1]['status']}" if finished else 'Waiting for first completed movement'
-            for k,line in enumerate((f'Completed: {len(finished)}  |  Accepted: {accepted}  |  Rejected: {rejected}',last+'  |  Saved temporal replay', 'One participant, one fresh clip; not a general accuracy claim')):
-                cv2.putText(canvas,line,(12,canvas.shape[0]-65+k*25),cv2.FONT_HERSHEY_SIMPLEX,min(.55,canvas.shape[1]/1500),(255,255,255),1,cv2.LINE_AA)
+            for column,(label,value) in enumerate((('Completed',len(finished)),('Accepted',accepted),('Rejected',rejected))):
+                center=round((column+.5)*canvas.shape[1]/3)
+                for text,scale,y in ((label,canvas.shape[1]/760,canvas.shape[0]-128),(str(value),canvas.shape[1]/390,canvas.shape[0]-72)):
+                    size=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,scale,2)[0]
+                    cv2.putText(canvas,text,(center-size[0]//2,y),cv2.FONT_HERSHEY_SIMPLEX,scale,(255,255,255),2,cv2.LINE_AA)
+            for k,line in enumerate((last+'  |  Saved temporal replay', 'One participant, one fresh clip; not a general accuracy claim')):
+                cv2.putText(canvas,line,(12,canvas.shape[0]-38+k*25),cv2.FONT_HERSHEY_SIMPLEX,min(.55,canvas.shape[1]/1500),(255,255,255),1,cv2.LINE_AA)
             if writer is None:
                 writer=cv2.VideoWriter(str(out),cv2.VideoWriter_fourcc(*'mp4v'),cap.get(cv2.CAP_PROP_FPS),(canvas.shape[1],canvas.shape[0]))
                 if not writer.isOpened():
