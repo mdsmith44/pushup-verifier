@@ -1,0 +1,97 @@
+{
+  "input": "private pilot2 observation CSV (not published)",
+  "observation_count": 326,
+  "mode": "temporal",
+  "config": {
+    "top_angle": 140.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 0,
+    "rejected": 0,
+    "unable_to_assess": 1
+  },
+  "attempts": [
+    {
+      "start_s": 0.633,
+      "end_s": 2.033,
+      "status": "unable_to_assess",
+      "reasons": [
+        "Required pose evidence missing."
+      ]
+    }
+  ],
+  "uncertainty_intervals": [
+    {
+      "start_s": 2.033,
+      "end_s": 2.167
+    },
+    {
+      "start_s": 3.668,
+      "end_s": 3.835
+    },
+    {
+      "start_s": 3.868,
+      "end_s": 4.068
+    },
+    {
+      "start_s": 4.102,
+      "end_s": 4.135
+    },
+    {
+      "start_s": 4.302,
+      "end_s": 4.368
+    },
+    {
+      "start_s": 5.402,
+      "end_s": 5.468
+    },
+    {
+      "start_s": 5.502,
+      "end_s": 5.635
+    },
+    {
+      "start_s": 7.237,
+      "end_s": 7.503
+    },
+    {
+      "start_s": 7.537,
+      "end_s": 7.603
+    },
+    {
+      "start_s": 7.67,
+      "end_s": 7.703
+    },
+    {
+      "start_s": 8.103,
+      "end_s": 8.17
+    },
+    {
+      "start_s": 8.37,
+      "end_s": 8.403
+    },
+    {
+      "start_s": 8.437,
+      "end_s": 8.503
+    },
+    {
+      "start_s": 8.537,
+      "end_s": 8.57
+    },
+    {
+      "start_s": 8.603,
+      "end_s": 8.67
+    },
+    {
+      "start_s": 8.903,
+      "end_s": 9.07
+    }
+  ],
+  "note": "Only top-anchored attempts are segmented; missing evidence can hide additional reps."
+}

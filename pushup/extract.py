@@ -16,6 +16,8 @@ def main():
     parser.add_argument("--model", required=True, type=Path)
     parser.add_argument("--side", choices=["left", "right"], required=True)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--include-landmarks", action="store_true", help="Include pixel coordinates for offline tracking diagnostics")
+    parser.add_argument("--include-confidence", action="store_true", help="Include per-joint visibility/presence and observation validity for diagnostics")
     parser.add_argument("--annotated-video", type=Path, help="Optional MP4 diagnostic video (no audio)")
     parser.add_argument("--review-frame", type=Path, help="Optional PNG at the greatest reliable raw elbow angle")
     parser.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "config/default.json")
@@ -56,7 +58,9 @@ def main():
     try:
         with mp.tasks.vision.PoseLandmarker.create_from_options(options) as model, args.output.open("x", newline="", encoding="utf-8") as stream:
             writer = csv.writer(stream)
-            writer.writerow(["timestamp", "elbow_angle", "body_angle", "confidence"])
+            coordinate_names = [f"{joint}_{axis}" for joint in ("shoulder", "elbow", "wrist", "hip", "ankle") for axis in ("x", "y")]
+            score_names = [f"{joint}_{kind}" for joint in ("shoulder", "elbow", "wrist", "hip", "ankle") for kind in ("visibility", "presence")]
+            writer.writerow(["timestamp", "elbow_angle", "body_angle", "confidence"] + (coordinate_names if args.include_landmarks else []) + (score_names + ["observation_status"] if args.include_confidence else []))
             while True:
                 ok, frame = cap.read()
                 if not ok:
@@ -69,8 +73,12 @@ def main():
                 result = model.detect_for_video(image, previous_ms)
                 elbow, body, confidence = "", "", 0
                 draw_points = None
+                score_values = [""] * 10
+                observation_status = "no_pose" if not result.pose_landmarks else "multiple_poses"
                 if len(result.pose_landmarks) == 1:
                     landmarks = [result.pose_landmarks[0][i] for i in indices]
+                    score_values = [v for p in landmarks for v in (p.visibility or 0, p.presence or 0)]
+                    observation_status = "invalid_coordinates_or_scores"
                     h, w = frame.shape[:2]
                     points = [(p.x*w, p.y*h) for p in landmarks]
                     scores = [min(p.visibility or 0, p.presence or 0) for p in landmarks]
@@ -80,9 +88,12 @@ def main():
                             body = angle(points[0], points[3], points[4])
                             confidence = min(scores)
                             draw_points = points
+                            observation_status = "measured"
                         except ValueError:
                             elbow, body, confidence = "", "", 0
-                writer.writerow([previous_ms / 1000, elbow, body, confidence])
+                            observation_status = "invalid_geometry"
+                coordinates = [v for point in draw_points for v in point] if draw_points else [""] * 10
+                writer.writerow([previous_ms / 1000, elbow, body, confidence] + (coordinates if args.include_landmarks else []) + (score_values + [observation_status] if args.include_confidence else []))
                 if args.annotated_video or args.review_frame:
                     display = annotate(frame, draw_points, elbow, body, confidence, previous_ms / 1000, args.side, config)
                     if args.annotated_video:

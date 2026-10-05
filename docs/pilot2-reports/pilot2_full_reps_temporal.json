@@ -1,0 +1,117 @@
+{
+  "input": "private pilot2 observation CSV (not published)",
+  "observation_count": 377,
+  "mode": "temporal",
+  "config": {
+    "top_angle": 140.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 1,
+    "rejected": 0,
+    "unable_to_assess": 1
+  },
+  "attempts": [
+    {
+      "start_s": 1.633,
+      "end_s": 3.167,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ]
+    },
+    {
+      "start_s": 3.635,
+      "end_s": 4.768,
+      "status": "unable_to_assess",
+      "reasons": [
+        "Required pose evidence missing."
+      ]
+    }
+  ],
+  "uncertainty_intervals": [
+    {
+      "start_s": 4.768,
+      "end_s": 4.802
+    },
+    {
+      "start_s": 4.835,
+      "end_s": 4.868
+    },
+    {
+      "start_s": 5.468,
+      "end_s": 5.502
+    },
+    {
+      "start_s": 5.535,
+      "end_s": 5.635
+    },
+    {
+      "start_s": 6.235,
+      "end_s": 6.268
+    },
+    {
+      "start_s": 7.003,
+      "end_s": 7.07
+    },
+    {
+      "start_s": 7.103,
+      "end_s": 7.137
+    },
+    {
+      "start_s": 8.137,
+      "end_s": 8.17
+    },
+    {
+      "start_s": 8.503,
+      "end_s": 8.537
+    },
+    {
+      "start_s": 8.77,
+      "end_s": 8.803
+    },
+    {
+      "start_s": 8.97,
+      "end_s": 9.003
+    },
+    {
+      "start_s": 9.537,
+      "end_s": 9.603
+    },
+    {
+      "start_s": 10.538,
+      "end_s": 10.605
+    },
+    {
+      "start_s": 10.672,
+      "end_s": 10.705
+    },
+    {
+      "start_s": 11.005,
+      "end_s": 11.038
+    },
+    {
+      "start_s": 11.305,
+      "end_s": 11.338
+    },
+    {
+      "start_s": 11.372,
+      "end_s": 11.405
+    },
+    {
+      "start_s": 12.038,
+      "end_s": 12.072
+    },
+    {
+      "start_s": 12.105,
+      "end_s": 12.138
+    }
+  ],
+  "note": "Only top-anchored attempts are segmented; missing evidence can hide additional reps."
+}

@@ -20,9 +20,10 @@ https://github.com/user-attachments/assets/f87522f5-fa4a-4be2-832a-94793e142257
 - Immediate and temporal decision methods operating on identical saved observations.
 - Timestamped accepted, rejected, and unassessable attempts, plus evidence-gap intervals.
 - A learning notebook that builds the landmark and geometry workflow incrementally.
-- 30 unit tests covering geometry, sequence logic, threshold boundaries, and uncertainty, including a deferred hand-release experiment.
+- Opt-in separation of movement completion from alignment assessment, plus explicit partial-start reporting.
+- 52 unit tests covering geometry, sequence logic, threshold boundaries, evidence gaps, and experimental policies, including a deferred hand-release experiment.
 
-**Status:** three development videos have been processed. Independent test-set evaluation, detailed per-repetition labels, and robust handling of missed top positions are still in progress. This is not a validated fitness assessment or an official military test scorer.
+**Status:** nine single-person recordings have been processed across three pilot batches. Fixed-setting follow-up evaluations exposed framing, startup, and tracking limitations; subsequent changes were tested on those same recordings and remain development results. This is not a validated fitness assessment or an official military test scorer.
 
 ## Pipeline
 
@@ -51,15 +52,36 @@ Immediate mode uses raw measurements. Temporal mode applies an elapsed-time expo
 | Shallow repetitions | 3 attempts, all insufficient depth | 3 rejected for depth | 1 rejected for depth; 1 unfinished tracked attempt |
 | Visibility challenge | 4 valid attempts reported by the recorder; attempts 2 and 4 obscured | 2 interrupted tracked attempts; none accepted/rejected | No attempts established; evidence gaps recorded |
 
-**These are exploratory development results, not accuracy claims.** The top threshold was tuned using the full-repetition clip. Manual labels are currently clip-level observations; independent, timestamped adjudication is pending. An unfinished or interrupted tracked attempt can span or omit multiple actual movements.
+**These are exploratory development results, not accuracy claims.** The top threshold was tuned using the full-repetition clip. The first batch has 12 approximate recorder-supplied attempt intervals; later batches have recorder-supplied counts and sequences. Independent adjudication and timestamped matching for the later batches remain pending. An unfinished or interrupted tracked attempt can span or omit multiple actual movements.
 
 The immediate method agrees with the manual counts on the first two clips. The temporal method suppresses later peaks near the top threshold and can merge several movements into one unfinished attempt. On the visibility clip, neither method produced an assessable decision for the clear attempts. A single low-confidence frame currently interrupts an active attempt.
 
 These failures are part of the research: they expose tradeoffs between noise suppression, decision coverage, and faithful segmentation. See [pilot findings and limitations](docs/pilot-results.md) and the [evaluation plan](docs/evaluation.md).
 
+## Follow-up findings and current experiments
+
+A 140° top threshold improved temporal-mode counts on the original full and shallow clips. We froze that configuration before processing two new batches. Pilot2 exposed a recording problem: the shoulder left the frame. Pilot3 improved framing, but per-landmark diagnostics showed that ankle visibility still caused most interruptions. Even with reliable arm evidence, the original all-joint confidence gate reset the whole attempt.
+
+Two opt-in changes address different failures:
+
+- **Separate alignment:** use shoulder–elbow–wrist confidence to track movement, and shoulder–hip–ankle confidence to assess alignment. Missing alignment evidence makes form unassessable without discarding an otherwise observable movement.
+- **Partial start:** report an initial descent and return when the starting top was not verified. These returns remain unassessable and are counted separately from complete top-anchored movements. The policy requires a 10° measured descent and cannot restart after a tracking interruption.
+
+| Pilot3 clip | Recorder's attempts | Frozen baseline completed decisions | Experimental top-anchored completions | Partial-start returns | Interrupted |
+|---|---:|---:|---:|---:|---:|
+| Full | 5 | 3 | 5 | 0 | 0 |
+| Shallow | 3 | 2 | 2 | 1 | 0 |
+| Mixed | 5 | 1 | 3 | 1 | 1 |
+
+**Completion does not mean valid form.** Of the five full-clip completions, three were accepted and two had insufficient alignment evidence. The shallow clip had two rejected completions and one unassessable partial start. The mixed clip had one rejected completion, two completed-but-unassessable movements, one unassessable partial-start return, and one interrupted attempt. Its completed-unassessable movements also lacked the required depth evidence. Exact correspondence to manual attempts still requires timestamped matching.
+
+These changes improve visibility into what the system observed; they do not establish accuracy or generalization. The original frozen evaluations are preserved. Single-frame dropout tolerance and an ankle-jump guard were also explored: neither is enabled in the normal pipeline, and the jump guard reduced tracking coverage. Landmark sensitivity remains a documented limitation rather than a solved problem.
+
+See the [pilot2 evaluation](docs/pilot2-evaluation.md), [pilot3 evaluation](docs/pilot3-evaluation.md), [confidence diagnosis](docs/pilot3-diagnosis.md), [separate-alignment experiment](docs/separate-alignment.md), and [partial-start experiment](docs/partial-start.md).
+
 ## Observable rules
 
-| Parameter | Current pilot setting |
+| Parameter | Default setting |
 |---|---:|
 | Top elbow angle | ≥145° |
 | Departure from top | ≤130° |
@@ -72,7 +94,7 @@ These failures are part of the research: they expose tradeoffs between noise sup
 
 The 145° top setting is a relaxed development criterion for the existing recordings, not proof of full elbow extension. A projected 90° elbow angle is also not geometrically equivalent to the upper arm being parallel to the floor. Camera perspective, landmark placement, and occlusion affect these measurements.
 
-Confidence is the minimum visibility/presence score across the selected shoulder, elbow, wrist, hip, and ankle. It is not a calibrated probability that an angle or decision is correct. See the complete [rubric](docs/rubric.md).
+The default confidence gate uses the minimum visibility/presence score across the selected shoulder, elbow, wrist, hip, and ankle. The opt-in separate-alignment policy uses distinct arm and alignment gates as described above. It is not a calibrated probability that an angle or decision is correct. See the complete [rubric](docs/rubric.md).
 
 ## Quick start: no video required
 
@@ -129,6 +151,28 @@ Select the anatomical side facing the camera. Extraction requires new output fil
 
 The annotated preview uses nominal FPS without audio; its displayed timestamps come from the source video. The review PNG selects the greatest reliable raw elbow angle, not a guaranteed fully extended pose. `.MOV` decoding depends on the installed codecs, and the extractor requires increasing source timestamps.
 
+## Run the experimental policies
+
+The defaults above remain unchanged. For the 140° temporal candidate with both experimental policies, extract a new diagnostic CSV with per-joint confidence, then replay it:
+
+```bash
+python -m pushup.extract \
+  data/raw/your_video.MOV \
+  --model models/pose_landmarker_full.task \
+  --side right \
+  --config config/pilot2_frozen.json \
+  --include-confidence --include-landmarks \
+  --output data/observations/your_video_diagnostic.csv
+
+python -m pushup.replay \
+  data/observations/your_video_diagnostic.csv \
+  --mode temporal --config config/pilot2_frozen.json \
+  --separate-alignment --partial-start \
+  --output results/your_video_experimental.json
+```
+
+`completed_movements` counts top-anchored completions, including rejected or unassessable form. `partial_start_returns` is separate. An attempt's `completed` field records whether a return to top was observed; `start_observed` distinguishes a verified starting top from a partial start. `counts.accepted` remains the valid-form decision count. Alignment-uncertain timestamps are reported separately from movement evidence-gap intervals. An empty gap list alone does not mean form was assessable.
+
 ## Explore the notebook
 
 [Pose overlay walkthrough](notebooks/01_pose_overlay_walkthrough.ipynb) records the hands-on learning process. Use the project environment as its kernel. Notebook development is ongoing; the command-line modules are the complete extraction and replay implementation. Notebook outputs are omitted from the published version to avoid embedding private video frames or environment paths.
@@ -144,20 +188,19 @@ For notebook work, install `jupyterlab`, `ipykernel`, and `matplotlib` in the sa
 | `pushup/overlay.py` | Diagnostic video annotation |
 | `pushup/engine.py` | Conventional-pushup state machine |
 | `pushup/replay.py` | Reproducible decision replay |
-| `config/default.json` | Current pilot thresholds |
+| `config/default.json` | Baseline thresholds (145° top) |
+| `config/pilot2_frozen.json` | Fixed follow-up configuration (140° top) |
 | `tests/` | Synthetic behavior and boundary tests |
 | `docs/` | Rubric, collection guide, pilot findings, and evaluation plan |
-| `examples/` | Small synthetic observation fixtures |
+| `examples/` | Synthetic fixtures and reproducible diagnostic experiments |
 | `notebooks/` | Incremental learning walkthrough |
 
 `hrp.py`, `hrp_replay.py`, and their tests are a deferred hand-release sequence experiment. They do not run in the conventional-pushup pipeline and are not a completed video-based HRP detector.
 
 ## Next research steps
 
-- Annotate attempt boundaries and obscuration intervals independently of predictions.
-- Overlay verifier state and raw/smoothed measurements for failure analysis.
-- Evaluate smoothing and persistence separately.
-- Investigate brief-dropout recovery without inventing motion during missing evidence.
-- Freeze settings, then evaluate new recording sessions and additional participants.
-
+- Complete timestamped matching for the follow-up recordings and report missed movements alongside form decisions.
+- Review remaining depth disagreements and whole-pose loss in the mixed clip.
+- Validate the experimental policies on a fresh labeled session without retuning.
+- Expand beyond one participant and camera setup before making generalization claims.
 MediaPipe performs the pretrained perception step. The project work focuses on geometry, stateful procedure verification, diagnostics, and transparent evaluation. See [MediaPipe documentation](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker) for model details.

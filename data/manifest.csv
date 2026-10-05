@@ -1,1 +1,10 @@
-clip_id,relative_path,person_id,session_id,split,camera_side,view,scenario,notes
+"clip_id","relative_path","person_id","session_id","split","camera_side","view","scenario","notes"
+"pilot_visibility","data/raw/pilot_visibility.MOV","pilot_person_01","unknown","development","right","unknown","visibility","Single-person pilot; recording session and camera view not yet labeled; approximate manual intervals supplied by recorder."
+"pilot_full_reps","data/raw/pilot_full_reps.MOV","pilot_person_01","unknown","development","right","unknown","pilot_full_reps","Approximate manual intervals supplied by recorder; session and camera view not yet labeled."
+"pilot_shallow_reps","data/raw/pilot_shallow_reps.MOV","pilot_person_01","unknown","development","right","unknown","pilot_shallow_reps","Approximate manual intervals supplied by recorder; session and camera view not yet labeled."
+"pilot2_full_reps","data/raw/pilot2_full_reps.MOV","pilot_person_01","unknown","evaluation","right","unknown","full_reps","Second pilot batch; right side confirmed; expected counts and sequence recorded before predictions; timestamps pending."
+"pilot2_shallow_reps","data/raw/pilot2_shallow_reps.MOV","pilot_person_01","unknown","evaluation","right","unknown","shallow_reps","Second pilot batch; right side confirmed; expected counts and sequence recorded before predictions; timestamps pending."
+"pilot2_mixed","data/raw/pilot2_mixed.MOV","pilot_person_01","unknown","evaluation","right","unknown","mixed","Second pilot batch; right side confirmed; expected counts and sequence recorded before predictions; timestamps pending."
+"pilot3_full_reps","data/raw/pilot3_full_reps.mov","pilot_person_01","unknown","evaluation","right","unknown","full_reps","Replacement for pilot2 framing issue; full body visible per recorder; same counts and order confirmed; timestamps pending."
+"pilot3_shallow_reps","data/raw/pilot3_shallow_reps.mov","pilot_person_01","unknown","evaluation","right","unknown","shallow_reps","Replacement for pilot2 framing issue; full body visible per recorder; same counts and order confirmed; timestamps pending."
+"pilot3_mixed","data/raw/pilot3_mixed.mov","pilot_person_01","unknown","evaluation","right","unknown","mixed","Replacement for pilot2 framing issue; full body visible per recorder; same counts and order confirmed; timestamps pending."
