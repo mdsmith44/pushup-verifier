@@ -1,0 +1,14 @@
+*
+!Dockerfile
+!requirements-video.txt
+!requirements-app.txt
+!requirements-app.lock.txt
+!pushup/
+!pushup/**
+!config/
+!config/**
+**/__pycache__/
+!docker_hello.py
+!requirements-learning.txt
+!examples/
+!examples/one_rep.csv

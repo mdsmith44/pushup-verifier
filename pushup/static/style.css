@@ -1,0 +1,49 @@
+:root{font-family:system-ui,sans-serif;color:#183331;background:#edf3f0}*{box-sizing:border-box}body{margin:0}main{max-width:960px;margin:auto;padding:48px 22px}.eyebrow{font-size:.75rem;letter-spacing:.15em;color:#376d62;font-weight:700}h1{font-size:clamp(2.3rem,6vw,4rem);line-height:1.05;letter-spacing:-.045em;margin:24px 0}.intro{font-size:1.15rem;max-width:650px;line-height:1.6}section{background:white;border:1px solid #dce5df;border-radius:20px;padding:28px;margin:28px 0}p{line-height:1.55}label{display:block;font-weight:600;margin:20px 0 8px}input,select{width:100%;padding:13px;border:1px solid #a8bab3;border-radius:8px;font:inherit}button{background:#165849;color:white;border:0;padding:14px 22px;border-radius:9px;font:inherit;font-weight:700;margin-top:22px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.secondary{background:#e9eeeb;color:#183331}.fine,footer{font-size:.85rem;color:#536b64}footer{padding:12px}.counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:12px}.count{background:#edf3f0;border-radius:12px;padding:16px}.count strong{display:block;font-size:2.2rem}.count span{font-size:.85rem}video{width:100%;max-height:720px;background:#101817;border-radius:10px}img{width:100%;margin:20px 0}a{color:#12624f;text-decoration:underline;cursor:pointer}.table{overflow:auto}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{text-align:left;padding:12px;border-bottom:1px solid #ddd;vertical-align:top}#status{font-weight:600}#status.error{color:#a22}button:focus-visible,a:focus-visible{outline:3px solid #db9a2c;outline-offset:3px}
+.demo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  border: 2px solid #24594f;
+  border-radius: 10px;
+  background: #24594f;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.demo-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.demo-toggle::before {
+  content: "+";
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+details[open] > .demo-toggle::before {
+  content: "−";
+}
+
+.demo-toggle:hover {
+  background: #193f38;
+}
+
+.demo-toggle:focus-visible {
+  outline: 3px solid #24594f;
+  outline-offset: 4px;
+}
+
+.pushup-example {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 20px auto;
+  border-radius: 12px;
+}

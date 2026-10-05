@@ -8,6 +8,8 @@ The current prototype runs locally with Python, MediaPipe, OpenCV, and NumPy. It
 
 ## Demo
 
+**New: local upload app.** Upload a MOV/MP4 and receive an annotated replay with large counters, an elbow-angle chart, and a downloadable report. See [local setup and tested limitations](docs/local-app.md). AWS deployment is planned, not yet live; the preview is local-only.
+
 A fresh mixed-set validation clip, processed without retuning: full–shallow–full–shallow–full. The overlay shows raw measurements and completed decisions from the saved temporal replay. 
 
 <img src='examples/pushup_with_counter.gif'>

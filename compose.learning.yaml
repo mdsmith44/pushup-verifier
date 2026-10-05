@@ -1,0 +1,30 @@
+services:
+  app:
+    image: pushup-verifier:learning
+    build:
+      context: .
+      dockerfile: Dockerfile.learning
+
+    ports:
+      - "127.0.0.1:8002:8000"
+
+    environment:
+      PUSHUP_MODEL: /models/pose_landmarker_full.task
+      PUSHUP_DATA: /data
+
+    volumes:
+      - ./models:/models:ro
+      - ./results/docker-learning/web-jobs:/data
+      - ./demo/pilot3B:/demo:ro
+
+    command:
+      - python
+      - -m
+      - uvicorn
+      - pushup.web:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "1"

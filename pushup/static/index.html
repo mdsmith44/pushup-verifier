@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pushup Verifier</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body><main>
+    <p class="eyebrow">COMPUTER VISION · RESEARCH PREVIEW</p>
+    <h1>Pushup Verifier</h1>
+    <h2>See your movement.<br>Understand the result.</h2>
+
+    <img
+  class="pushup-example"
+  src="/static/pushup-example.png"
+  alt="Illustration of a person performing a pushup with a straight body."
+>
+
+    <p class="intro">Upload a short pushup video to get an annotated replay, an elbow-angle chart, and a breakdown of observed movements.</p>
+
+<section>
+  <h2>Try the demo</h2>
+  <p>No video handy? Explore a completed analysis of five pushup attempts.</p>
+
+  <details>
+    <summary class="demo-toggle">View sample results</summary>
+
+    <p>
+      The recorded sequence is full–shallow–full–shallow–full.
+      The verifier reported <strong>5 completed movements</strong>:
+      <strong>3 accepted</strong> and <strong>2 rejected</strong>.
+      Both rejected attempts lacked the required depth.
+    </p>
+
+    <h3>Annotated video</h3>
+    <video controls playsinline preload="none">
+      <source src="/demo/video" type="video/mp4">
+      Your browser does not support video playback.
+    </video>
+
+    <h3>Right elbow angle throughout the recording</h3>
+    <img
+      src="/demo/chart"
+      loading="lazy"
+      alt="Right elbow angle over five pushup attempts, with top and depth thresholds."
+    >
+
+    <p>
+      <a href="/demo/video" download="pushup-demo.mp4">Download video</a>
+      ·
+      <a href="/demo/chart" download="pushup-demo-chart.png">Download chart</a>
+      ·
+      <a href="/demo/report" download="pushup-demo-report.json">Download report</a>
+    </p>
+  </details>
+</section>
+
+    <section>
+    
+    <h2>Upload a video</h2>
+    <p>Film one person from the side, keep the whole body visible, and hold the top position for a second before starting.</p>
+<form id="upload"><label for="video">Video · MOV or MP4 · up to 200 MB, 2 minutes, 4K</label><input id="video" type="file" accept=".mov,.mp4,video/mp4,video/quicktime" required><label for="side">Which side of the person faces the camera?</label><select id="side"><option value="right">Their right side</option><option value="left">Their left side</option></select><button id="submit" type="submit">Analyze video</button></form>
+<p class="fine">Local preview: files are processed on this computer. Source uploads are removed after processing; results expire after 24 hours while the server is running. Results can also be deleted below.</p><p id="status" role="status" aria-live="polite"></p></section>
+<section id="results" hidden><h2>Your results</h2><div id="counts" class="counts"></div><p>Completed movements are not necessarily valid reps. Partial-start returns are listed separately; unassessable segments may be completed or interrupted.</p><video id="replay" controls playsinline preload="metadata"></video><p><a id="download-video" download="pushup-annotated.mp4">Download annotated video</a></p><img id="chart" alt="Measured elbow angle over time with top and depth thresholds"><p><a id="download-chart" download="pushup-chart.png">Download chart</a> · <a id="download-report" download="pushup-report.json">Download full report</a></p><h3>Attempt details</h3><div class="table"><table><thead><tr><th>Time</th><th>Outcome</th><th>Details</th></tr></thead><tbody id="attempts"></tbody></table></div><button id="delete" class="secondary">Delete this result</button></section>
+<footer>Experimental assessment, not an official fitness score. Camera perspective and pose-estimation errors can affect results. The chart shows raw angles; decisions use temporal processing.</footer></main></body></html>

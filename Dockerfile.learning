@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libgles2 \
+        libegl1 \
+        libglib2.0-0 \
+        libgl1 \
+        libportaudio2 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-app.lock.txt .
+RUN python -m pip install --no-cache-dir -r requirements-app.lock.txt
+
+COPY pushup ./pushup
+COPY config ./config
+COPY examples/one_rep.csv ./examples/one_rep.csv
+
+CMD ["python", "-m", "pushup.replay", "examples/one_rep.csv", "--mode", "immediate"]

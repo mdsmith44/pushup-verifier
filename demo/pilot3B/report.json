@@ -1,0 +1,92 @@
+{
+  "input": "uploaded video",
+  "observation_count": 541,
+  "mode": "temporal",
+  "config": {
+    "top_angle": 140.0,
+    "departure_angle": 130.0,
+    "bottom_angle": 90.0,
+    "alignment_angle": 160.0,
+    "min_confidence": 0.6,
+    "max_gap": 0.25,
+    "persistence": 0.1,
+    "smoothing_tau": 0.08
+  },
+  "counts": {
+    "accepted": 3,
+    "rejected": 2,
+    "unable_to_assess": 0
+  },
+  "attempts": [
+    {
+      "start_s": 2.133,
+      "end_s": 3.767,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ],
+      "completed": true,
+      "start_observed": true
+    },
+    {
+      "start_s": 5.367,
+      "end_s": 7.033,
+      "status": "rejected",
+      "reasons": [
+        "Required bottom-angle evidence not observed."
+      ],
+      "completed": true,
+      "start_observed": true
+    },
+    {
+      "start_s": 8.467,
+      "end_s": 10.4,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ],
+      "completed": true,
+      "start_observed": true
+    },
+    {
+      "start_s": 12.0,
+      "end_s": 13.733,
+      "status": "rejected",
+      "reasons": [
+        "Required bottom-angle evidence not observed."
+      ],
+      "completed": true,
+      "start_observed": true
+    },
+    {
+      "start_s": 15.167,
+      "end_s": 17.0,
+      "status": "accepted",
+      "reasons": [
+        "Observable rubric satisfied."
+      ],
+      "completed": true,
+      "start_observed": true
+    }
+  ],
+  "uncertainty_intervals": [],
+  "note": "Partial-start returns are reported separately from fully top-anchored completed movements. Missing evidence can hide additional reps.",
+  "evidence_policy": "separate_alignment",
+  "completed_movements": 5,
+  "alignment_uncertain_timestamps": [],
+  "startup_policy": "partial_start_after_10_degree_descent",
+  "partial_start_returns": 0,
+  "deployment": {
+    "side": "right",
+    "normalized_fps": 30,
+    "max_dimension": 1280,
+    "model_sha256": "4eaa5eb7a98365221087693fcc286334cf0858e2eb6e15b506aa4a7ecdcec4ad",
+    "config_sha256": "291c4f67fd97a260c56072dd9cc3d223e9b45447437a6611d7e7f46e9d2b93f4",
+    "processing_seconds": 51.21,
+    "versions": {
+      "mediapipe": "1.0.1",
+      "opencv-python": "5.0.0.93",
+      "matplotlib": "3.11.2"
+    }
+  }
+}
