@@ -10,7 +10,7 @@ The current prototype runs locally with Python, MediaPipe, OpenCV, and NumPy. It
 
 A fresh mixed-set validation clip, processed without retuning: full–shallow–full–shallow–full. The overlay shows raw measurements and completed decisions from the saved temporal replay. 
 
-<img src='results/pushup_with_counter.gif'>
+<img src='examples/pushup_with_counter.gif'>
 
 
 [Click to open the MP4.](docs/media/validation-demo.mp4)
