@@ -4,6 +4,7 @@ import os
 import re
 import time
 import uuid
+from botocore.exceptions import ClientError
 
 import boto3
 from botocore.config import Config
@@ -115,6 +116,81 @@ def create_job(event, owner_id):
         "upload_expires_in": 300,
     })
 
+def confirm_upload(event, owner_id):
+    job_id = (event.get("pathParameters") or {}).get("job_id", "")
+
+    try:
+        uuid.UUID(job_id)
+    except (ValueError, TypeError):
+        return response(400, {"message": "Invalid job ID."})
+
+    job = table.get_item(
+        Key={"job_id": job_id},
+        ConsistentRead=True,
+    ).get("Item")
+
+    # Do not reveal another user's job.
+    if not job or job.get("owner_id") != owner_id:
+        return response(404, {"message": "Job not found."})
+
+    if job["status"] == "ready":
+        return response(200, {"job_id": job_id, "status": "ready"})
+
+    if job["status"] != "awaiting_upload":
+        return response(409, {
+            "message": "This job is no longer awaiting an upload."
+        })
+
+    try:
+        uploaded = s3.head_object(
+            Bucket=bucket,
+            Key=job["input_key"],
+        )
+    except ClientError as error:
+        code = error.response["Error"]["Code"]
+
+        if code in ("403", "404", "NoSuchKey", "NotFound"):
+            return response(409, {
+                "message": "Upload could not be verified. Please try again."
+            })
+
+        raise
+
+    if (
+        uploaded["ContentLength"] != job["size_bytes"]
+        or uploaded.get("ContentType") != job["content_type"]
+    ):
+        return response(409, {
+            "message": "Uploaded file does not match the job."
+        })
+
+    try:
+        table.update_item(
+            Key={"job_id": job_id},
+            UpdateExpression=(
+                "SET #status = :ready, verified_at = :now, "
+                "input_etag = :etag"
+            ),
+            ConditionExpression=(
+                "owner_id = :owner AND #status = :awaiting"
+            ),
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={
+                ":ready": "ready",
+                ":awaiting": "awaiting_upload",
+                ":owner": owner_id,
+                ":now": int(time.time()),
+                ":etag": uploaded["ETag"],
+            },
+        )
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return response(409, {
+                "message": "Job status changed. Please try again."
+            })
+        raise
+
+    return response(200, {"job_id": job_id, "status": "ready"})
 
 def lambda_handler(event, context):
     claims = (
@@ -143,5 +219,13 @@ def lambda_handler(event, context):
             })
 
         return create_job(event, claims["sub"])
+
+    if route == "POST /jobs/{job_id}/confirm":
+        if not can_process:
+            return response(403, {
+                "message": "Video processing is limited to approved testers."
+            })
+
+        return confirm_upload(event, claims["sub"])
 
     return response(404, {"message": "Route not found."})

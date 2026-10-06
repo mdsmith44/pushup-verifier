@@ -224,8 +224,26 @@ uploadForm.addEventListener("submit", async (event) => {
       throw new Error(`Upload failed (HTTP ${uploaded.status}).`);
     }
 
+    uploadStatus.textContent = "Verifying your upload…";
+
+    const confirmation = await fetch(
+      `https://fe20wvd7l2.execute-api.us-east-2.amazonaws.com/jobs/${job.job_id}/confirm`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+      },
+    );
+
+    if (!confirmation.ok) {
+      throw new Error(
+        `Video uploaded, but verification failed (HTTP ${confirmation.status}).`,
+      );
+    }
+
     uploadStatus.textContent =
-      "Video uploaded successfully. Processing is being connected next.";
+      "Video uploaded and verified. Ready for processing.";
 
     videoFile.value = "";
   } catch (error) {
