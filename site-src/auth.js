@@ -26,7 +26,29 @@ const status = document.getElementById("auth-status");
 const signIn = document.getElementById("sign-in");
 const signOut = document.getElementById("sign-out");
 
+const uploadForm = document.getElementById("upload-form");
+const videoFile = document.getElementById("video-file");
+const cameraSide = document.getElementById("camera-side");
+const uploadButton = document.getElementById("upload-button");
+const uploadStatus = document.getElementById("upload-status");
+
+let uploadApproved = false;
+let uploading = false;
+
+function updateUploadControls() {
+  const disabled = !uploadApproved || uploading;
+  videoFile.disabled = disabled;
+  cameraSide.disabled = disabled;
+  uploadButton.disabled = disabled;
+}
+
+function setUploadAccess(approved) {
+  uploadApproved = approved;
+  updateUploadControls();
+}
+
 function showUser(user) {
+  setUploadAccess(false);
   const signedIn = Boolean(user && !user.expired);
 
   signIn.hidden = signedIn;
@@ -97,6 +119,12 @@ async function checkApi(user) {
       throw new Error("API returned an unexpected user.");
     }
 
+    setUploadAccess(data.can_process === true);
+
+    uploadStatus.textContent = uploadApproved
+        ? "Choose a video and camera side to upload."
+        : "Uploads are limited to approved testers.";
+
     const permission = data.can_process
         ? "Video processing approved."
         : "Video processing is currently limited to approved testers.";
@@ -108,6 +136,108 @@ async function checkApi(user) {
       "Signed in, but the API connection failed. Please try refreshing.";
   }
 }
+
+uploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!uploadApproved || uploading) return;
+
+  const file = videoFile.files[0];
+  if (!file) {
+    uploadStatus.textContent = "Choose a video first.";
+    return;
+  }
+
+  const extension = file.name.split(".").pop().toLowerCase();
+  const contentTypes = {
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+  };
+  const contentType = contentTypes[extension];
+
+  if (!contentType) {
+    uploadStatus.textContent = "Choose an MP4, MOV, or WebM video.";
+    return;
+  }
+
+  if (file.size === 0 || file.size > 200 * 1024 * 1024) {
+    uploadStatus.textContent =
+      "Choose a nonempty video no larger than 200 MiB.";
+    return;
+  }
+
+  uploading = true;
+  updateUploadControls();
+
+  try {
+    const user = await auth.getUser();
+
+    if (!user || user.expired) {
+      setUploadAccess(false);
+      throw new Error("Your session expired. Sign out and sign in again.");
+    }
+
+    uploadStatus.textContent = "Preparing your upload…";
+
+    const result = await fetch(
+      "https://fe20wvd7l2.execute-api.us-east-2.amazonaws.com/jobs",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          size: file.size,
+          content_type: contentType,
+          side: cameraSide.value,
+        }),
+      },
+    );
+
+    if (!result.ok) {
+      if (result.status === 401 || result.status === 403) {
+        setUploadAccess(false);
+      }
+      throw new Error(`Could not prepare upload (HTTP ${result.status}).`);
+    }
+
+    const job = await result.json();
+    const form = new FormData();
+
+    for (const [name, value] of Object.entries(job.upload.fields)) {
+      form.append(name, value);
+    }
+
+    // S3 requires the file field to come last.
+    form.append("file", file);
+
+    uploadStatus.textContent = "Uploading your video…";
+
+    const uploaded = await fetch(job.upload.url, {
+      method: "POST",
+      body: form,
+    });
+
+    if (!uploaded.ok) {
+      throw new Error(`Upload failed (HTTP ${uploaded.status}).`);
+    }
+
+    uploadStatus.textContent =
+      "Video uploaded successfully. Processing is being connected next.";
+
+    videoFile.value = "";
+  } catch (error) {
+    uploadStatus.textContent =
+      error instanceof TypeError
+        ? "Could not connect to the upload service. Please try again."
+        : error.message;
+  } finally {
+    uploading = false;
+    updateUploadControls();
+  }
+});
 
 async function initialize() {
   const parameters = new URLSearchParams(window.location.search);

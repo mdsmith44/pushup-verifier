@@ -71,11 +71,41 @@
 
     <section>
     
-   <section>
-  <h2>Analyze your own video</h2>
+<section aria-labelledby="upload-heading">
+  <h2 id="upload-heading">Analyze your own video</h2>
+
   <p>
-    Cloud uploads are coming soon. In the meantime, explore
-    the sample results above or visit my portfolio below.
+    Approved testers can upload an MP4, MOV, or WebM video
+    up to 200 MiB. Video processing is being connected next.
+  </p>
+
+  <form id="upload-form">
+    <p>
+      <label for="video-file">Video</label><br>
+      <input
+        id="video-file"
+        type="file"
+        accept=".mp4,.mov,.webm"
+        required
+        disabled
+      >
+    </p>
+
+    <p>
+      <label for="camera-side">Camera side</label><br>
+      <select id="camera-side" required disabled>
+        <option value="right">Right side of the person faces the camera</option>
+        <option value="left">Left side of the person faces the camera</option>
+      </select>
+    </p>
+
+    <button id="upload-button" type="submit" disabled>
+      Upload video
+    </button>
+  </form>
+
+  <p id="upload-status" role="status" aria-live="polite">
+    Sign in to check upload access.
   </p>
 </section>
 
