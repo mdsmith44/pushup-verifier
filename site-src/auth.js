@@ -130,11 +130,11 @@ async function checkApi(user) {
 
     uploadStatus.textContent = uploadApproved
         ? "Choose a video and camera side to upload."
-        : "Uploads are limited to approved testers.";
+        : "Upload access could not be confirmed.";
 
     const permission = data.can_process
-        ? "Video processing approved."
-        : "Video processing is currently limited to approved testers.";
+        ? "You can upload and process videos."
+        : "Upload access could not be confirmed.";
 
     status.textContent =
         `Signed in as ${user.profile.email || "a user"}. ${permission}`;

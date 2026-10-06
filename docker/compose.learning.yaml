@@ -1,9 +1,10 @@
+name: pushup-learning
 services:
   app:
     image: pushup-verifier:learning
     build:
-      context: .
-      dockerfile: Dockerfile.learning
+      context: ..
+      dockerfile: docker/Dockerfile.worker
 
     ports:
       - "127.0.0.1:8002:8000"
@@ -13,9 +14,9 @@ services:
       PUSHUP_DATA: /data
 
     volumes:
-      - ./models:/models:ro
-      - ./results/docker-learning/web-jobs:/data
-      - ./demo/pilot3B:/demo:ro
+      - ../models:/models:ro
+      - ../results/docker-learning/web-jobs:/data
+      - ../demo/pilot3B:/demo:ro
 
     command:
       - python

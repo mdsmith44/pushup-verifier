@@ -1,12 +1,15 @@
+name: pushup-verifier
 services:
   app:
     image: pushup-verifier:local
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.local
     ports:
       - "127.0.0.1:${PUSHUP_PORT:-8000}:8000"
     volumes:
       - jobs:/data
-      - ./models:/models:ro
+      - ../models:/models:ro
     mem_limit: 4g
     cpus: 2
     pids_limit: 256

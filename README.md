@@ -1,218 +1,148 @@
 # Pushup Verifier
 
-**Computer vision research in progress: measuring pushup motion and evaluating when a rule-based verifier can make a reliable decision.**
+**Upload a pushup video. See the movement, inspect the evidence, and understand the result.**
 
-Pushup Verifier processes a recorded video, estimates body landmarks with MediaPipe, measures elbow and body angles, and checks a conventional top → bottom → top pushup sequence. Its purpose is to explore the engineering behind video-based procedure verification: translating observable rules into code, handling uncertain observations, and evaluating decisions against human review.
+Pushup Verifier combines computer vision, a reproducible decision engine, and an AWS application that runs video analysis on demand. It estimates body landmarks with MediaPipe, measures elbow and body angles, and follows a top → bottom → top movement sequence to report accepted, rejected, or unassessable attempts.
 
-The current prototype runs locally with Python, MediaPipe, OpenCV, and NumPy. It uses a pretrained pose model; model training is not part of the current work.
+**[Try the live application](https://dg05a9no1enlg.cloudfront.net/)** · **[Watch the validation video](docs/media/validation-demo.mp4)** · **[Read the research findings](docs/research-overview.md)**
 
-## Demo
+The public sample needs no account. Sign in with Google or email/password to upload your own video; no individual approval is required.
 
-**New: local upload app.** Upload a MOV/MP4 and receive an annotated replay with large counters, an elbow-angle chart, and a downloadable report. See [local setup and tested limitations](docs/local-app.md). AWS deployment is planned, not yet live; the preview is local-only.
-
-A fresh mixed-set validation clip, processed without retuning: full–shallow–full–shallow–full. The overlay shows raw measurements and completed decisions from the saved temporal replay. 
+## Animated demo
 
 <img src='examples/pushup_with_counter.gif'>
 
+The mixed validation recording contains **full → shallow → full → shallow → full** attempts. With settings fixed before evaluation, the verifier reported **5 completed movements: 3 accepted and 2 rejected for depth**, with no unassessable decisions or partial starts. See the [saved validation report](docs/pilot3B-validation.md).
 
-[Click to open the MP4.](docs/media/validation-demo.mp4)
+This is agreement on one new recording from the same participant, not a general accuracy estimate. The animated demo illustrates the pipeline; newly generated cloud videos use the updated counter spacing.
 
+## What the application delivers
 
-## What is implemented
+- **Annotated replay:** body landmarks, measured angles, confidence, and separate completed/accepted/rejected counters.
+- **Angle chart:** raw elbow measurements and the top/depth thresholds used for assessment.
+- **JSON report:** timestamped decisions, uncertainty intervals, partial starts, configuration, model hash, dependency versions, and processing time.
+- **An authenticated upload flow:** temporary upload forms, private storage, and ownership checks on job and result requests.
+- **On-demand processing:** one Fargate job at a time, a processing spinner, status polling, and reconnection after refreshing the same browser tab.
+- **Automatic file retention:** uploads and processing copies expire after 1 day; results expire after 7 days. S3 deletion is asynchronous. Result links last 10 minutes and can be renewed by refreshing while files remain available.
 
-- Video-to-measurement extraction with an explicit anatomical side selection.
-- Elbow-angle and shoulder–hip–ankle calculations in pixel coordinates.
-- Annotated video showing landmarks, angles, confidence, and source timestamps.
-- Immediate and temporal decision methods operating on identical saved observations.
-- Timestamped accepted, rejected, and unassessable attempts, plus evidence-gap intervals.
-- A learning notebook that builds the landmark and geometry workflow incrementally.
-- Opt-in separation of movement completion from alignment assessment, plus explicit partial-start reporting.
-- 52 unit tests covering geometry, sequence logic, threshold boundaries, evidence gaps, and experimental policies, including a deferred hand-release experiment.
+Supported uploads are **MP4, MOV, or WebM**, up to **200 MiB and 120 seconds**, with a maximum input pixel area of 4096 × 2160. Select the anatomical side facing the camera. Processing normalizes orientation and dimensions, converts footage to 30 fps, and strips audio.
 
-**Status:** ten single-person recordings have been processed across three pilot batches and one fresh validation clip. Fixed-setting follow-up evaluations exposed framing, startup, and tracking limitations; subsequent changes were tested on those same recordings and remain development results. The fresh mixed clip matched all five expected decisions without retuning; broader validation is still needed. This is not a validated fitness assessment or an official military test scorer.
-
-## Pipeline
+## How it works
 
 ```mermaid
 flowchart LR
-    A[Recorded video] --> B[MediaPipe pose landmarks]
-    B --> C[Angles and confidence CSV]
-    C --> D[Immediate or temporal verifier]
-    D --> E[Timestamped decisions JSON]
-    B --> F[Annotated video for inspection]
+    Video[Recorded video] --> Pose[MediaPipe pose landmarks]
+    Pose --> Measurements[Angles and confidence CSV]
+    Measurements --> Verifier[Temporal movement verifier]
+    Verifier --> Results[Annotated video, chart and JSON report]
 ```
 
-The separation between extraction and replay makes experiments reproducible: thresholds and temporal processing can be compared without rerunning pose estimation.
+Extraction and decision replay are separate: saved observations can be replayed with different policies without rerunning pose estimation. The deployed worker uses the frozen **140° top / 90° depth** configuration, temporal smoothing, separate movement/alignment confidence gates, and explicit partial-start reporting.
 
-## Research question
+MediaPipe supplies pretrained perception. The project work is the geometry, sequence logic, handling of uncertainty, evaluation, and application engineering—not training a pose model.
 
-**Does smoothing and persistent threshold evidence reduce false decisions without suppressing real movement transitions?**
+## Cloud architecture
 
-Immediate mode uses raw measurements. Temporal mode applies an elapsed-time exponential moving average and requires threshold conditions to persist for 0.1 seconds. Both use the same confidence checks and movement sequence.
+```mermaid
+flowchart TD
+    Browser[Browser] --> Frontend[CloudFront + private S3 website]
+    Browser --> Login[Cognito: Google or email sign-in]
+    Browser --> API[API Gateway JWT authorization + Lambda]
+    API --> Jobs[DynamoDB job records and processing slot]
+    API --> Upload[Temporary S3 upload form]
+    Upload --> Input[Private S3 video storage]
+    API --> Workflow[Step Functions Standard workflow]
+    Workflow --> Worker[ECS Fargate video worker]
+    Input --> Worker
+    Worker --> Output[Private S3 results]
+    Workflow --> Jobs
+    API --> Links[Ownership-checked temporary result links]
+    Output --> Links
+    Links --> Browser
+```
 
-## Initial pilot findings
+The workflow checks ownership and job readiness, claims a single processing slot, copies the verified input using its recorded ETag, and starts the container. It checks the worker exit code, records success or failure, and releases the slot. The worker state has a **15-minute timeout**; the workflow has a **20-minute limit**. Interrupted executions or failed cleanup can leave the slot locked for operator review.
 
-| Development clip | Manual observation | Immediate mode | Temporal mode |
-|---|---|---|---|
-| Full repetitions | 5 completed repetitions | 5 accepted | 2 accepted; 1 unfinished tracked attempt |
-| Shallow repetitions | 3 attempts, all insufficient depth | 3 rejected for depth | 1 rejected for depth; 1 unfinished tracked attempt |
-| Visibility challenge | 4 valid attempts reported by the recorder; attempts 2 and 4 obscured | 2 interrupted tracked attempts; none accepted/rejected | No attempts established; evidence gaps recorded |
+The AWS deployment is live in **us-east-2 (Ohio)**. The browser-to-results flow has been exercised with both Google and email accounts. Separate checks confirmed that unsigned requests receive 401, and a second account cannot retrieve another account's job. See [deployment and operations](docs/aws-deployment.md).
 
-**These are exploratory development results, not accuracy claims.** The top threshold was tuned using the full-repetition clip. The first batch has 12 approximate recorder-supplied attempt intervals; later batches have recorder-supplied counts and sequences. Independent adjudication and timestamped matching for the later batches remain pending. An unfinished or interrupted tracked attempt can span or omit multiple actual movements.
+## Run locally
 
-The immediate method agrees with the manual counts on the first two clips. The temporal method suppresses later peaks near the top threshold and can merge several movements into one unfinished attempt. On the visibility clip, neither method produced an assessable decision for the clear attempts. A single low-confidence frame currently interrupts an active attempt.
-
-These failures are part of the research: they expose tradeoffs between noise suppression, decision coverage, and faithful segmentation. See [pilot findings and limitations](docs/pilot-results.md) and the [evaluation plan](docs/evaluation.md).
-
-## Follow-up findings and current experiments
-
-A 140° top threshold improved temporal-mode counts on the original full and shallow clips. We froze that configuration before processing two new batches. Pilot2 exposed a recording problem: the shoulder left the frame. Pilot3 improved framing, but per-landmark diagnostics showed that ankle visibility still caused most interruptions. Even with reliable arm evidence, the original all-joint confidence gate reset the whole attempt.
-
-Two opt-in changes address different failures:
-
-- **Separate alignment:** use shoulder–elbow–wrist confidence to track movement, and shoulder–hip–ankle confidence to assess alignment. Missing alignment evidence makes form unassessable without discarding an otherwise observable movement.
-- **Partial start:** report an initial descent and return when the starting top was not verified. These returns remain unassessable and are counted separately from complete top-anchored movements. The policy requires a 10° measured descent and cannot restart after a tracking interruption.
-
-| Pilot3 clip | Recorder's attempts | Frozen baseline completed decisions | Experimental top-anchored completions | Partial-start returns | Interrupted |
-|---|---:|---:|---:|---:|---:|
-| Full | 5 | 3 | 5 | 0 | 0 |
-| Shallow | 3 | 2 | 2 | 1 | 0 |
-| Mixed | 5 | 1 | 3 | 1 | 1 |
-
-**Completion does not mean valid form.** Of the five full-clip completions, three were accepted and two had insufficient alignment evidence. The shallow clip had two rejected completions and one unassessable partial start. The mixed clip had one rejected completion, two completed-but-unassessable movements, one unassessable partial-start return, and one interrupted attempt. Its completed-unassessable movements also lacked the required depth evidence. Exact correspondence to manual attempts still requires timestamped matching.
-
-These changes improve visibility into what the system observed; they do not establish accuracy or generalization. The original frozen evaluations are preserved. Single-frame dropout tolerance and an ankle-jump guard were also explored: neither is enabled in the normal pipeline, and the jump guard reduced tracking coverage. Landmark sensitivity remains a documented limitation rather than a solved problem.
-
-See the [pilot2 evaluation](docs/pilot2-evaluation.md), [pilot3 evaluation](docs/pilot3-evaluation.md), [confidence diagnosis](docs/pilot3-diagnosis.md), [separate-alignment experiment](docs/separate-alignment.md), and [partial-start experiment](docs/partial-start.md).
-
-## Fresh-video validation milestone
-
-After the experimental policies were implemented, a new recording (`pilot3B_mixed`) was evaluated using the fixed 140° temporal configuration with separate alignment and partial-start reporting enabled. Its expected sequence was supplied before processing. All five movements were completed, with decisions **accepted → rejected for depth → accepted → rejected for depth → accepted**. There were no evidence gaps, unassessable decisions, or partial starts.
-
-This is count-and-order agreement on one new clip from the same participant, not a general accuracy estimate. Predicted intervals have not yet been independently matched to manual timestamps. The baseline temporal policy at the same thresholds also succeeds on this clip, so it does not demonstrate the benefit of the experimental uncertainty policies. See the [validation report and saved results](docs/pilot3B-validation.md).
-
-## Observable rules
-
-| Parameter | Default setting |
-|---|---:|
-| Top elbow angle | ≥145° |
-| Departure from top | ≤130° |
-| Bottom elbow angle | ≤90° |
-| Body alignment angle | ≥160° |
-| Minimum landmark confidence | 0.6 |
-| Maximum observation gap | 0.25 seconds |
-| Temporal persistence | 0.10 seconds |
-| Smoothing time constant | 0.08 seconds |
-
-The 145° top setting is a relaxed development criterion for the existing recordings, not proof of full elbow extension. A projected 90° elbow angle is also not geometrically equivalent to the upper arm being parallel to the floor. Camera perspective, landmark placement, and occlusion affect these measurements.
-
-The default confidence gate uses the minimum visibility/presence score across the selected shoulder, elbow, wrist, hip, and ankle. The opt-in separate-alignment policy uses distinct arm and alignment gates as described above. It is not a calibrated probability that an angle or decision is correct. See the complete [rubric](docs/rubric.md).
-
-## Quick start: no video required
-
-Python 3.10+ runs the decision engine and tests with only the standard library. From the repository root:
+The decision engine uses only the Python standard library. From the repository root:
 
 ```bash
 python -m unittest discover -s tests -v
 python -m pushup.replay examples/one_rep.csv --mode immediate
-python -m pushup.replay examples/one_rep.csv --mode temporal --output results/synthetic_demo.json
 ```
 
-The example CSV is synthetic. It verifies software behavior and is not experimental evidence.
+The example CSV is synthetic; it tests behavior rather than model accuracy.
 
-## Run on your own video
-
-The video workflow was exercised with Python 3.12 in a Conda environment on Linux/WSL. Use one environment for the whole project:
+For the complete video processor, use the tested Linux/WSL Python 3.12 environment:
 
 ```bash
-conda create -n pushup-verifier python=3.12 pip
-conda activate pushup-verifier
-python -m pip install -r requirements-video.txt
-```
+python -m pip install -r requirements/app.lock.txt
 
-On Ubuntu/WSL, if MediaPipe reports a missing `libGLESv2.so.2`:
-
-```bash
-sudo apt update
-sudo apt install libgles2
-```
-
-Download the **Full Pose Landmarker** `.task` bundle from the [official MediaPipe model page](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker#models), and place it at `models/pose_landmarker_full.task`. Place your own video in `data/raw/`. Videos and model weights are excluded from the repository.
-
-```bash
-python -m pushup.extract \
-  data/raw/your_video.MOV \
-  --model models/pose_landmarker_full.task \
+python -m pushup.process data/raw/your_video.MOV \
   --side right \
-  --output data/observations/your_video.csv \
-  --annotated-video results/your_video_overlay.mp4 \
-  --review-frame results/your_video_max_angle.png
-
-python -m pushup.replay \
-  data/observations/your_video.csv \
-  --mode immediate \
-  --output results/your_video_immediate.json
-
-python -m pushup.replay \
-  data/observations/your_video.csv \
-  --mode temporal \
-  --output results/your_video_temporal.json
+  --model models/pose_landmarker_full.task \
+  --output results/new-job
 ```
 
-Select the anatomical side facing the camera. Extraction requires new output filenames and will not intentionally overwrite existing files. Replay applies the settings in `config/default.json` and records them in each report. Existing overlays retain the thresholds shown when they were generated.
+Download the **Full Pose Landmarker** model from the [MediaPipe model documentation](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker#models) and place it at `models/pose_landmarker_full.task`. Use a fresh output directory. Private recordings, processing outputs, and model weights are excluded from Git.
 
-The annotated preview uses nominal FPS without audio; its displayed timestamps come from the source video. The review PNG selects the greatest reliable raw elbow angle, not a guaranteed fully extended pose. `.MOV` decoding depends on the installed codecs, and the extractor requires increasing source timestamps.
-
-## Run the experimental policies
-
-The defaults above remain unchanged. For the 140° temporal candidate with both experimental policies, extract a new diagnostic CSV with per-joint confidence, then replay it:
+To run the local upload interface:
 
 ```bash
-python -m pushup.extract \
-  data/raw/your_video.MOV \
-  --model models/pose_landmarker_full.task \
-  --side right \
-  --config config/pilot2_frozen.json \
-  --include-confidence --include-landmarks \
-  --output data/observations/your_video_diagnostic.csv
-
-python -m pushup.replay \
-  data/observations/your_video_diagnostic.csv \
-  --mode temporal --config config/pilot2_frozen.json \
-  --separate-alignment --partial-start \
-  --output results/your_video_experimental.json
+python -m uvicorn pushup.web:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
-`completed_movements` counts top-anchored completions, including rejected or unassessable form. `partial_start_returns` is separate. An attempt's `completed` field records whether a return to top was observed; `start_observed` distinguishes a verified starting top from a partial start. `counts.accepted` remains the valid-form decision count. Alignment-uncertain timestamps are reported separately from movement evidence-gap intervals. An empty gap list alone does not mean form was assessable.
+Or use Docker:
 
-## Explore the notebook
+```bash
+docker compose -f docker/compose.yaml up --build
+```
 
-[Pose overlay walkthrough](notebooks/01_pose_overlay_walkthrough.ipynb) records the hands-on learning process. Use the project environment as its kernel. Notebook development is ongoing; the command-line modules are the complete extraction and replay implementation. Notebook outputs are omitted from the published version to avoid embedding private video frames or environment paths.
+Open `http://127.0.0.1:8000`. This local interface has different access controls and retention from the cloud app; keep it bound to loopback. See [local setup](docs/local-app.md) and [Docker build commands](docker/README.md).
 
-For notebook work, install `jupyterlab`, `ipykernel`, and `matplotlib` in the same environment if needed. The exploratory notebook may use arm-only confidence, whereas the command-line pipeline checks five landmarks.
+## Build the website
+
+The hosted frontend is plain HTML/CSS and bundled JavaScript, with `oidc-client-ts` handling the authorization-code/PKCE sign-in flow.
+
+```bash
+npm ci
+npm run build:auth
+```
+
+Edit `site-src/auth.js`; the build writes `site/static/auth.js`. The deployable website is in `site/`. Deployment commands and retention configuration are documented in [AWS operations](docs/aws-deployment.md).
+
+## Research and limitations
+
+**Completed movement does not mean accepted form.** Missing alignment evidence, tracking gaps, and partial starts are reported explicitly. Camera perspective and incorrect landmarks can affect measured angles even when confidence scores look strong. Projected elbow angles are an operational proxy for depth, not proof that the upper arm is parallel to the floor.
+
+Development recordings exposed missed peaks, occlusion, framing problems, and unreliable ankle evidence. The project preserves those failures alongside the successful mixed validation clip. Broader testing across participants and camera setups, plus independent timestamped labels, is still needed. This is an experimental assessment, not an official fitness score or military test scorer.
+
+Explore the [research overview](docs/research-overview.md), [rubric](docs/rubric.md), [evaluation plan](docs/evaluation.md), and [pose walkthrough notebook](notebooks/01_pose_overlay_walkthrough.ipynb).
 
 ## Repository guide
 
-| Location | Purpose |
+| Directory | Purpose |
 |---|---|
-| `pushup/extract.py` | Video decoding, pose estimation, and CSV export |
-| `pushup/geometry.py` | Joint-angle calculation |
-| `pushup/overlay.py` | Diagnostic video annotation |
-| `pushup/engine.py` | Conventional-pushup state machine |
-| `pushup/replay.py` | Reproducible decision replay |
-| `config/default.json` | Baseline thresholds (145° top) |
-| `config/pilot2_frozen.json` | Fixed follow-up configuration (140° top) |
-| `tests/` | Synthetic behavior and boundary tests |
-| `docs/` | Rubric, collection guide, pilot findings, and evaluation plan |
-| `examples/` | Synthetic fixtures and reproducible diagnostic experiments |
-| `notebooks/` | Incremental learning walkthrough |
+| `pushup/` | Pose extraction, geometry, decision engine, rendering, and local/cloud workers |
+| `cloud/` | Lambda API, Step Functions workflow, and S3 retention configuration |
+| `site/` | Deployable website and published sample assets |
+| `site-src/` | Authentication, upload, polling, and result-display JavaScript source |
+| `docker/` | Local and worker Dockerfiles, Compose configurations, and build guide |
+| `requirements/` | Python dependency lists and tested Linux/Python 3.12 snapshot |
+| `config/` | Baseline and frozen experimental configurations |
+| `tests/`, `app_tests/` | Decision-engine and local application checks |
+| `examples/` | Animated demo, synthetic inputs, and diagnostic/learning scripts |
+| `docs/` | Research evidence, validation reports, setup, and operations |
+| `notebooks/` | Incremental computer vision walkthrough |
 
-`hrp.py`, `hrp_replay.py`, and their tests are a deferred hand-release sequence experiment. They do not run in the conventional-pushup pipeline and are not a completed video-based HRP detector.
+## Next steps
 
-## Next research steps
+- Expire DynamoDB job records while preserving the processing-slot record.
+- Add explicit deletion and improve recovery for interrupted processing.
+- Add per-user usage limits and more automated cloud integration checks.
+- Expand validation with independent timing labels and a wider set of participants and recording conditions.
 
-- Complete timestamped matching for the follow-up recordings and report missed movements alongside form decisions.
-- Review remaining depth disagreements and whole-pose loss in the mixed clip.
-- Extend the fresh-clip validation with independent timing labels and recordings that exercise uncertainty policies.
-- Expand beyond one participant and camera setup before making generalization claims.
-MediaPipe performs the pretrained perception step. The project work focuses on geometry, stateful procedure verification, diagnostics, and transparent evaluation. See [MediaPipe documentation](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker) for model details.
+The deferred hand-release experiment (`hrp.py` / `hrp_replay.py`) is separate from the conventional-pushup pipeline and is not a completed video detector.

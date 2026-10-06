@@ -11,10 +11,10 @@ RUN apt-get update \
         libportaudio2 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-app.lock.txt .
-RUN python -m pip install --no-cache-dir -r requirements-app.lock.txt
-COPY requirements-aws.txt .
-RUN python -m pip install --no-cache-dir -r requirements-aws.txt
+COPY requirements/app.lock.txt ./requirements/app.lock.txt
+RUN python -m pip install --no-cache-dir -r requirements/app.lock.txt
+COPY requirements/aws.txt ./requirements/aws.txt
+RUN python -m pip install --no-cache-dir -r requirements/aws.txt
 
 COPY pushup ./pushup
 COPY config ./config

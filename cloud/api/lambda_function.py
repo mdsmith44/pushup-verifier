@@ -1,7 +1,6 @@
 import base64
 import json
 import os
-import re
 import time
 import uuid
 from botocore.exceptions import ClientError
@@ -34,19 +33,6 @@ def response(status_code, body):
         },
         "body": json.dumps(body),
     }
-
-
-def is_tester(claims):
-    groups = claims.get("cognito:groups", [])
-
-    if isinstance(groups, str):
-        groups = [
-            part.strip("\"'")
-            for part in re.split(r"[\s,\[\]]+", groups)
-            if part
-        ]
-
-    return "pushup-testers" in groups
 
 
 def create_job(event, owner_id):
@@ -422,37 +408,21 @@ def lambda_handler(event, context):
     if claims.get("token_use") != "access" or not claims.get("sub"):
         return response(401, {"message": "Sign-in required."})
 
-    can_process = is_tester(claims)
     route = event.get("routeKey")
 
     if route == "GET /me":
         return response(200, {
             "user_id": claims["sub"],
-            "can_process": can_process,
+            "can_process": True,
         })
 
     if route == "POST /jobs":
-        if not can_process:
-            return response(403, {
-                "message": "Video processing is limited to approved testers."
-            })
-
         return create_job(event, claims["sub"])
 
     if route == "POST /jobs/{job_id}/confirm":
-        if not can_process:
-            return response(403, {
-                "message": "Video processing is limited to approved testers."
-            })
-
         return confirm_upload(event, claims["sub"])
 
     if route == "POST /jobs/{job_id}/start":
-        if not can_process:
-            return response(403, {
-                "message": "Video processing is limited to approved testers."
-            })
-
         return start_job(event, claims["sub"])
 
     if route == "GET /jobs/{job_id}":

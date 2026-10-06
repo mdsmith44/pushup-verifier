@@ -37,7 +37,7 @@ def main():
         import cv2
         import mediapipe as mp
     except ImportError:
-        parser.error("Install requirements-video.txt in a dedicated environment first")
+        parser.error("Install requirements/video.txt in a dedicated environment first")
     options = mp.tasks.vision.PoseLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_path=str(args.model)),
         running_mode=mp.tasks.vision.RunningMode.VIDEO, num_poses=2)
