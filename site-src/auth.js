@@ -36,7 +36,7 @@ function showUser(user) {
 
   status.textContent = signedIn
     ? `Signed in as ${user.profile.email || "a Google user"}.`
-    : "Sign in with Google to use your account.";
+    : "Sign in with Google or your email address.";
 }
 
 signIn.addEventListener("click", async () => {
@@ -44,9 +44,7 @@ signIn.addEventListener("click", async () => {
   status.textContent = "Opening Google sign-in…";
 
   try {
-    await auth.signinRedirect({
-      extraQueryParams: { identity_provider: "Google" },
-    });
+    await auth.signinRedirect();
   } catch {
     status.textContent = "Could not start sign-in. Please try again.";
     signIn.disabled = false;
@@ -72,6 +70,45 @@ signOut.addEventListener("click", async () => {
 
 auth.events.addAccessTokenExpired(() => showUser(null));
 
+
+async function checkApi(user) {
+  if (!user || user.expired) return;
+
+  status.textContent = "Signed in. Checking API connection…";
+
+  try {
+    const result = await fetch(
+      "https://fe20wvd7l2.execute-api.us-east-2.amazonaws.com/me",
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+        cache: "no-store",
+      },
+    );
+
+    if (!result.ok) {
+      throw new Error(`API returned ${result.status}`);
+    }
+
+    const data = await result.json();
+
+    if (data.user_id !== user.profile.sub) {
+      throw new Error("API returned an unexpected user.");
+    }
+
+    const permission = data.can_process
+        ? "Video processing approved."
+        : "Video processing is currently limited to approved testers.";
+
+    status.textContent =
+        `Signed in as ${user.profile.email || "a user"}. ${permission}`;
+  } catch {
+    status.textContent =
+      "Signed in, but the API connection failed. Please try refreshing.";
+  }
+}
+
 async function initialize() {
   const parameters = new URLSearchParams(window.location.search);
   const isCallback =
@@ -84,7 +121,9 @@ async function initialize() {
     }
 
     await auth.clearStaleState();
-    showUser(await auth.getUser());
+    const user = await auth.getUser();
+    showUser(user);
+    await checkApi(user);
   } catch {
     await auth.removeUser();
     showUser(null);
@@ -103,5 +142,6 @@ async function initialize() {
     }
   }
 }
+
 
 initialize();
