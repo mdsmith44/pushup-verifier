@@ -1,0 +1,352 @@
+{
+  "Comment": "Process an owned, verified pushup video",
+  "QueryLanguage": "JSONPath",
+  "StartAt": "ReadJob",
+  "TimeoutSeconds": 1200,
+  "States": {
+    "ReadJob": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "ConsistentRead": true
+      },
+      "ResultPath": "$.job",
+      "Next": "CheckJob"
+    },
+    "CheckJob": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.job.Item.status.S",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.job.Item.owner_id.S",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.job.Item.status.S",
+              "StringEquals": "ready"
+            },
+            {
+              "Variable": "$.job.Item.owner_id.S",
+              "StringEqualsPath": "$.owner_id"
+            }
+          ],
+          "Next": "AcquireProcessingSlot"
+        }
+      ],
+      "Default": "JobUnavailable"
+    },
+    "ClaimJob": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "UpdateExpression": "SET #status = :processing, execution_arn = :execution",
+        "ConditionExpression": "#status = :ready AND owner_id = :owner",
+        "ExpressionAttributeNames": {
+          "#status": "status"
+        },
+        "ExpressionAttributeValues": {
+          ":processing": {
+            "S": "processing"
+          },
+          ":ready": {
+            "S": "ready"
+          },
+          ":owner": {
+            "S.$": "$.owner_id"
+          },
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "CopyVerifiedInput",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.claim_error",
+          "Next": "ReleaseSlotAfterClaimFailure"
+        }
+      ]
+    },
+    "CopyVerifiedInput": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:s3:copyObject",
+      "Parameters": {
+        "Bucket": "mdsmith44-pushup-verifier-dev",
+        "CopySource.$": "States.Format('mdsmith44-pushup-verifier-dev/{}', $.job.Item.input_key.S)",
+        "CopySourceIfMatch.$": "$.job.Item.input_etag.S",
+        "Key.$": "States.Format('inputs/verified/{}/{}/source', $.owner_id, $.job_id)",
+        "TaggingDirective": "REPLACE"
+      },
+      "ResultPath": null,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.worker_error",
+          "Next": "MarkFailed"
+        }
+      ],
+      "Next": "RunWorker"
+    },
+    "RunWorker": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "TimeoutSeconds": 900,
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "Cluster": "arn:aws:ecs:us-east-2:040956601157:cluster/pushup-verifier-dev",
+        "TaskDefinition": "arn:aws:ecs:us-east-2:040956601157:task-definition/pushup-worker:1",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": [
+              "subnet-0b09aa3abcfbce9a8",
+              "subnet-002339982e4aa02f6",
+              "subnet-0e0d985acb840f6a1"
+            ],
+            "SecurityGroups": [
+              "sg-0c1012ed6a3ac0efd"
+            ],
+            "AssignPublicIp": "ENABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "pushup-worker",
+              "Command.$": "States.Array('python', '-m', 'pushup.cloud_worker', '--bucket', 'mdsmith44-pushup-verifier-dev', '--input-key', States.Format('inputs/verified/{}/{}/source', $.owner_id, $.job_id), '--model-key', 'models/pose_landmarker_full.task', '--side', $.job.Item.side.S, '--work-dir', '/tmp/pushup-job', '--output-prefix', States.Format('outputs/jobs/{}/{}', $.owner_id, $.job_id))"
+            }
+          ]
+        }
+      },
+      "ResultPath": "$.worker",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.worker_error",
+          "Next": "MarkFailed"
+        }
+      ],
+      "Next": "CheckWorkerExit"
+    },
+    "CheckWorkerExit": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.worker.Containers[0].ExitCode",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.worker.Containers[0].ExitCode",
+              "NumericEquals": 0
+            }
+          ],
+          "Next": "MarkCompleted"
+        }
+      ],
+      "Default": "MarkFailed"
+    },
+    "MarkCompleted": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "UpdateExpression": "SET #status = :completed, output_prefix = :prefix",
+        "ConditionExpression": "execution_arn = :execution AND #status = :processing",
+        "ExpressionAttributeNames": {
+          "#status": "status"
+        },
+        "ExpressionAttributeValues": {
+          ":completed": {
+            "S": "completed"
+          },
+          ":processing": {
+            "S": "processing"
+          },
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          },
+          ":prefix": {
+            "S.$": "States.Format('outputs/jobs/{}/{}', $.owner_id, $.job_id)"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "ReleaseSlotAfterSuccess"
+    },
+    "MarkFailed": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S.$": "$.job_id"
+          }
+        },
+        "UpdateExpression": "SET #status = :failed",
+        "ConditionExpression": "execution_arn = :execution AND #status = :processing",
+        "ExpressionAttributeNames": {
+          "#status": "status"
+        },
+        "ExpressionAttributeValues": {
+          ":failed": {
+            "S": "failed"
+          },
+          ":processing": {
+            "S": "processing"
+          },
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "ReleaseSlotAfterFailure"
+    },
+    "ProcessingFailed": {
+      "Type": "Fail",
+      "Error": "VideoProcessingFailed",
+      "Cause": "The worker failed or exceeded its time limit."
+    },
+    "JobUnavailable": {
+      "Type": "Fail",
+      "Error": "JobUnavailable",
+      "Cause": "The job is missing, belongs to another user, or is not ready."
+    },
+    "AcquireProcessingSlot": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S": "_processing_slot"
+          }
+        },
+        "UpdateExpression": "SET slot_owner = :execution, active_job = :job",
+        "ConditionExpression": "attribute_not_exists(slot_owner)",
+        "ExpressionAttributeValues": {
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          },
+          ":job": {
+            "S.$": "$.job_id"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "DynamoDB.ConditionalCheckFailedException"
+          ],
+          "ResultPath": "$.slot_error",
+          "Next": "ProcessingBusy"
+        }
+      ],
+      "Next": "ClaimJob"
+    },
+    "ProcessingBusy": {
+      "Type": "Fail",
+      "Error": "ProcessingBusy",
+      "Cause": "Another video is being processed. Try again later."
+    },
+    "ReleaseSlotAfterSuccess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S": "_processing_slot"
+          }
+        },
+        "UpdateExpression": "REMOVE slot_owner, active_job",
+        "ConditionExpression": "slot_owner = :execution",
+        "ExpressionAttributeValues": {
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "ProcessingSucceeded"
+    },
+    "ReleaseSlotAfterFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S": "_processing_slot"
+          }
+        },
+        "UpdateExpression": "REMOVE slot_owner, active_job",
+        "ConditionExpression": "slot_owner = :execution",
+        "ExpressionAttributeValues": {
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "ProcessingFailed"
+    },
+    "ReleaseSlotAfterClaimFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "pushup-jobs-dev",
+        "Key": {
+          "job_id": {
+            "S": "_processing_slot"
+          }
+        },
+        "UpdateExpression": "REMOVE slot_owner, active_job",
+        "ConditionExpression": "slot_owner = :execution",
+        "ExpressionAttributeValues": {
+          ":execution": {
+            "S.$": "$$.Execution.Id"
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "JobUnavailable"
+    },
+    "ProcessingSucceeded": {
+      "Type": "Succeed"
+    }
+  }
+}
