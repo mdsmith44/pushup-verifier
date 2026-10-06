@@ -1,0 +1,33 @@
+{
+  "name": "pushup-verifier",
+  "version": "1.0.0",
+  "description": "**Computer vision research in progress: measuring pushup motion and evaluating when a rule-based verifier can make a reliable decision.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:auth": "esbuild site-src/auth.js --bundle --minify --platform=browser --target=es2020 --outfile=site/static/auth.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mdsmith44/pushup-verifier.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mdsmith44/pushup-verifier/issues"
+  },
+  "homepage": "https://github.com/mdsmith44/pushup-verifier#readme",
+  "dependencies": {
+    "oidc-client-ts": "3.5.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

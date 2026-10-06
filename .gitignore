@@ -22,3 +22,4 @@ notebooks/mediapipe.ipynb
 
 # Selected, explicitly published portfolio demo only
 !docs/media/validation-demo.mp4
+node_modules/
