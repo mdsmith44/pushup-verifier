@@ -374,6 +374,27 @@ def get_job(event, owner_id):
         body["results"] = {}
 
         for kind, (filename, disposition) in artifacts.items():
+            try:
+                s3.head_object(
+                    Bucket=bucket,
+                    Key=f"{prefix}/{filename}",
+                )
+            except ClientError as error:
+                if error.response["Error"]["Code"] in (
+                    "403", "404", "NoSuchKey", "NotFound",
+                ):
+                    return response(200, {
+                        "job_id": job_id,
+                        "status": "expired",
+                        "message": (
+                            "These results are no longer available. "
+                            "Upload a new video to run another analysis."
+                        ),
+                    })
+                raise
+
+
+
             body["results"][kind] = s3.generate_presigned_url(
                 "get_object",
                 Params={

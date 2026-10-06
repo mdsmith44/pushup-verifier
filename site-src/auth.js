@@ -218,6 +218,25 @@ async function processAndWatch(jobId) {
       return;
     }
 
+    if (job.status === "expired") {
+      jobResults.hidden = true;
+      resultVideo.pause();
+      resultVideo.removeAttribute("src");
+      resultVideo.load();
+      resultChart.removeAttribute("src");
+
+      const user = await auth.getUser();
+      if (user) {
+        const key = latestJobKey(user);
+        if (sessionStorage.getItem(key) === jobId) {
+          sessionStorage.removeItem(key);
+        }
+      }
+
+      uploadStatus.textContent = job.message;
+      return;
+    }
+
     if (job.status === "failed") {
       throw new Error(job.message || "Video processing failed.");
     }

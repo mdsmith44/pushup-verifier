@@ -1,0 +1,34 @@
+{
+  "Rules": [
+    {
+      "ID": "ExpireUploadedVideos",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "inputs/uploads/"
+      },
+      "Expiration": {
+        "Days": 1
+      }
+    },
+    {
+      "ID": "ExpireProcessingCopies",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "inputs/verified/"
+      },
+      "Expiration": {
+        "Days": 1
+      }
+    },
+    {
+      "ID": "ExpireProcessingResults",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "outputs/jobs/"
+      },
+      "Expiration": {
+        "Days": 7
+      }
+    }
+  ]
+}
