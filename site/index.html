@@ -75,8 +75,8 @@
   <h2 id="upload-heading">Analyze your own video</h2>
 
   <p>
-    Approved testers can upload an MP4, MOV, or WebM video
-    up to 200 MiB. Video processing is being connected next.
+  Approved testers can upload an MP4, MOV, or WebM video
+  up to 200 MB (roughly 2 minutes for 1080p cell phone video) and view the completed analysis here.
   </p>
 
   <form id="upload-form">
@@ -104,11 +104,50 @@
     </button>
   </form>
 
-  <p id="upload-status" role="status" aria-live="polite">
+  <div class="upload-status-row">
+    <span id="processing-spinner" class="processing-spinner" aria-hidden="true" hidden></span>
+    <p id="upload-status" role="status" aria-live="polite">
     Sign in to check upload access.
+    </p>
+  </div>
+  <p id="processing-hint" class="fine" hidden>
+    Processing may take a few minutes, especially for longer videos.
+    Keep this page open, or refresh to reconnect to your job.
   </p>
 </section>
 
+<section id="job-results" aria-labelledby="results-heading" hidden>
+  <h2 id="results-heading">Your results</h2>
+
+  <h3>Annotated video</h3>
+  <video id="result-video" controls playsinline preload="metadata">
+    Your browser does not support video playback.
+  </video>
+
+  <h3>Elbow-angle chart</h3>
+  <img
+    id="result-chart"
+    alt="Elbow angles and assessment markers from your uploaded video."
+  >
+
+  <p>
+    <a id="result-video-link" target="_blank" rel="noopener">
+      Open video
+    </a>
+    ·
+    <a id="result-chart-link" target="_blank" rel="noopener">
+      Open chart
+    </a>
+    ·
+    <a id="result-report-link">
+      Download report
+    </a>
+  </p>
+
+  <p>
+    Result links expire after 10 minutes.
+  </p>
+</section>
 
 <section class="portfolio-contact">
   <h2>Questions or feedback?</h2>

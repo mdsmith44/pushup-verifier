@@ -31,6 +31,13 @@ const videoFile = document.getElementById("video-file");
 const cameraSide = document.getElementById("camera-side");
 const uploadButton = document.getElementById("upload-button");
 const uploadStatus = document.getElementById("upload-status");
+const processingSpinner = document.getElementById("processing-spinner");
+const processingHint = document.getElementById("processing-hint");
+
+function setProcessingIndicator(active) {
+  processingSpinner.hidden = !active;
+  processingHint.hidden = !active;
+}
 
 let uploadApproved = false;
 let uploading = false;
@@ -134,6 +141,127 @@ async function checkApi(user) {
   } catch {
     status.textContent =
       "Signed in, but the API connection failed. Please try refreshing.";
+  }
+}
+
+const jobResults = document.getElementById("job-results");
+const resultVideo = document.getElementById("result-video");
+const resultChart = document.getElementById("result-chart");
+const resultVideoLink = document.getElementById("result-video-link");
+const resultChartLink = document.getElementById("result-chart-link");
+const resultReportLink = document.getElementById("result-report-link");
+
+const apiUrl = "https://fe20wvd7l2.execute-api.us-east-2.amazonaws.com";
+
+function latestJobKey(user) {
+  return `pushup-latest-job:${user.profile.sub}`;
+}
+
+async function jobRequest(jobId, method = "GET", suffix = "") {
+  const user = await auth.getUser();
+
+  if (!user || user.expired) {
+    setUploadAccess(false);
+    throw new Error("Your session expired. Sign in again to view your job.");
+  }
+
+  const result = await fetch(
+    `${apiUrl}/jobs/${encodeURIComponent(jobId)}${suffix}`,
+    {
+      method,
+      headers: {
+        Authorization: `Bearer ${user.access_token}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    },
+  );
+
+  const data = await result.json();
+
+  if (!result.ok) {
+    throw new Error(data.message || `Request failed (HTTP ${result.status}).`);
+  }
+
+  return data;
+}
+
+function displayResults(results) {
+  resultVideo.src = results.video;
+  resultChart.src = results.chart;
+  resultVideoLink.href = results.video;
+  resultChartLink.href = results.chart;
+  resultReportLink.href = results.report;
+
+  jobResults.hidden = false;
+  uploadStatus.textContent =
+    "Processing complete. Your results are below. Refresh to renew expired links.";
+}
+
+async function processAndWatch(jobId) {
+  setProcessingIndicator(true);
+  try {
+  let job = await jobRequest(jobId);
+
+  if (job.status === "ready") {
+    uploadStatus.textContent = "Starting video processing…";
+    await jobRequest(jobId, "POST", "/start");
+  }
+
+  const deadline = Date.now() + 20 * 60 * 1000;
+
+  while (Date.now() < deadline) {
+    job = await jobRequest(jobId);
+
+    if (job.status === "completed") {
+      displayResults(job.results);
+      return;
+    }
+
+    if (job.status === "failed") {
+      throw new Error(job.message || "Video processing failed.");
+    }
+
+    if (job.status === "ready") {
+      throw new Error(
+        job.message || "Processing has not started. Refresh to try again.",
+      );
+    }
+
+    if (job.status === "awaiting_upload") {
+      throw new Error("This upload has not been verified.");
+    }
+
+    uploadStatus.textContent = job.status === "starting"
+      ? "Preparing video processing…"
+      : "Processing your video…";
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  throw new Error(
+    "Stopped checking after 20 minutes. Refresh to check your job again.",
+  );
+  } finally {
+    setProcessingIndicator(false);
+  }
+}
+
+async function resumeLatestJob(user) {
+  const jobId = sessionStorage.getItem(latestJobKey(user));
+  if (!jobId) return;
+
+  uploading = true;
+  updateUploadControls();
+
+  try {
+    await processAndWatch(jobId);
+  } catch (error) {
+    uploadStatus.textContent =
+      `${error.message} Refresh to reconnect to your saved job.`;
+  } finally {
+    uploading = false;
+    updateUploadControls();
   }
 }
 
@@ -242,10 +370,11 @@ uploadForm.addEventListener("submit", async (event) => {
       );
     }
 
-    uploadStatus.textContent =
-      "Video uploaded and verified. Ready for processing.";
-
+    sessionStorage.setItem(latestJobKey(user), job.job_id);
     videoFile.value = "";
+    jobResults.hidden = true;
+
+    await processAndWatch(job.job_id);
   } catch (error) {
     uploadStatus.textContent =
       error instanceof TypeError
@@ -272,6 +401,9 @@ async function initialize() {
     const user = await auth.getUser();
     showUser(user);
     await checkApi(user);
+    if (user && !user.expired && uploadApproved) {
+      await resumeLatestJob(user);
+    }
   } catch {
     await auth.removeUser();
     showUser(null);

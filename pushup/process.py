@@ -17,6 +17,53 @@ def run(command, log):
     subprocess.run(command, stdout=log, stderr=log, check=True, timeout=600)
 
 
+def add_counts_panel(canvas, values, uncertain, partial):
+    """Keep labels, counts and notes in separate rows using font metrics."""
+    import cv2
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    width = canvas.shape[1]
+    column_width = width / 3
+    labels = ('Completed', 'Accepted', 'Rejected')
+    label_scale = min(1.1, width / 760)
+    number_scale = min(2.0, width / 390)
+    label_scale = min(label_scale, *(label_scale * (column_width - 16) /
+        cv2.getTextSize(label, font, label_scale, 2)[0][0] for label in labels))
+    # Fixed metrics keep frame dimensions constant as counts increase.
+    number_scale = min(number_scale, number_scale * (column_width - 16) /
+        cv2.getTextSize('9999', font, number_scale, 2)[0][0])
+    (_, label_height), label_base = cv2.getTextSize('Completed', font, label_scale, 2)
+    (_, number_height), number_base = cv2.getTextSize('0123456789', font, number_scale, 2)
+    label_y = 16 + label_height
+    number_y = label_y + label_base + 14 + number_height
+    note_scale = min(.6, width / 1500)
+    (_, note_height), note_base = cv2.getTextSize('Assessment', font, note_scale, 1)
+    note_y = number_y + number_base + 16 + note_height
+    note_step = note_height + note_base + 8
+    panel_height = note_y + note_step + note_base + 28
+    top = canvas.shape[0]
+    canvas = cv2.copyMakeBorder(canvas, 0, panel_height, 0, 0,
+        cv2.BORDER_CONSTANT, value=(20, 20, 20))
+    for column, (label, value) in enumerate(zip(labels, values)):
+        center = round((column + .5) * column_width)
+        for text, scale, y in ((label, label_scale, label_y), (str(value), number_scale, number_y)):
+            text_width = cv2.getTextSize(text, font, scale, 2)[0][0]
+            cv2.putText(canvas, text, (center - text_width // 2, top + y),
+                font, scale, (255, 255, 255), 2, cv2.LINE_AA)
+    notes = (
+        f'Unassessable segments: {uncertain} | Partial returns: {partial}',
+        'Completed does not mean valid form. Experimental assessment.',
+    )
+    for index, text in enumerate(notes):
+        text_width = cv2.getTextSize(text, font, note_scale, 1)[0][0]
+        scale = min(note_scale, note_scale * (width - 24) / text_width)
+        cv2.putText(canvas, text, (12, top + note_y + index * note_step),
+            font, scale, (255, 255, 255), 1, cv2.LINE_AA)
+    # H.264 requires even dimensions.
+    if canvas.shape[0] % 2:
+        canvas = cv2.copyMakeBorder(canvas, 0, 1, 0, 0, cv2.BORDER_CONSTANT, value=(20, 20, 20))
+    return canvas
+
+
 def render(video, observations, report, side, destination):
     import cv2
     from .engine import Config
@@ -32,18 +79,11 @@ def render(video, observations, report, side, destination):
             t=float(row['timestamp'])
             points=[(float(row[j+'_x']),float(row[j+'_y'])) for j in ('shoulder','elbow','wrist','hip','ankle')] if row['shoulder_x'] else None
             canvas=annotate(frame,points,float(row['elbow_angle']) if row['elbow_angle'] else '',float(row['body_angle']) if row['body_angle'] else '',float(row['confidence']),t,side,config)
-            canvas=cv2.copyMakeBorder(canvas,0,170,0,0,cv2.BORDER_CONSTANT,value=(20,20,20))
             finished=[a for a in report['attempts'] if a['end_s']<=t]
             values=(sum(a.get('completed',False) and a.get('start_observed',True) for a in finished),sum(a['status']=='accepted' for a in finished),sum(a['status']=='rejected' for a in finished))
-            for column,(label,value) in enumerate(zip(('Completed','Accepted','Rejected'),values)):
-                center=round((column+.5)*canvas.shape[1]/3)
-                for text,scale,y in ((label,canvas.shape[1]/760,canvas.shape[0]-138),(str(value),canvas.shape[1]/390,canvas.shape[0]-82)):
-                    width=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,scale,2)[0][0]
-                    cv2.putText(canvas,text,(center-width//2,y),cv2.FONT_HERSHEY_SIMPLEX,scale,(255,255,255),2,cv2.LINE_AA)
             partial=sum(a.get('completed',False) and not a.get('start_observed',True) for a in finished)
             uncertain=sum(a['status']=='unable_to_assess' for a in finished)
-            for k,text in enumerate((f'Unassessable segments: {uncertain} | Partial returns: {partial}', 'Completed does not mean valid form. Experimental assessment.')):
-                cv2.putText(canvas,text,(12,canvas.shape[0]-42+k*25),cv2.FONT_HERSHEY_SIMPLEX,min(.6,canvas.shape[1]/1500),(255,255,255),1,cv2.LINE_AA)
+            canvas=add_counts_panel(canvas,values,uncertain,partial)
             if writer is None:
                 writer=cv2.VideoWriter(str(destination),cv2.VideoWriter_fourcc(*'mp4v'),30,(canvas.shape[1],canvas.shape[0]))
                 if not writer.isOpened():

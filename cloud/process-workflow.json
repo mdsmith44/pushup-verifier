@@ -117,7 +117,7 @@
       "Parameters": {
         "LaunchType": "FARGATE",
         "Cluster": "arn:aws:ecs:us-east-2:040956601157:cluster/pushup-verifier-dev",
-        "TaskDefinition": "arn:aws:ecs:us-east-2:040956601157:task-definition/pushup-worker:1",
+        "TaskDefinition": "arn:aws:ecs:us-east-2:040956601157:task-definition/pushup-worker:2",
         "NetworkConfiguration": {
           "AwsvpcConfiguration": {
             "Subnets": [

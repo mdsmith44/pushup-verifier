@@ -76,3 +76,20 @@ details[open] > .demo-toggle::before {
   outline: 3px solid #24594f;
   outline-offset: 4px;
 }
+
+.upload-status-row { display: flex; align-items: center; gap: 12px; }
+.processing-spinner {
+  display: inline-block;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #dce5df;
+  border-top-color: #165849;
+  border-radius: 50%;
+  animation: processing-spin .8s linear infinite;
+}
+.processing-spinner[hidden] { display: none; }
+@keyframes processing-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .processing-spinner { animation: none; }
+}
